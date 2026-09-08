@@ -1,0 +1,32 @@
+# Local credentials, browser state, and portal output
+.env
+.env.*
+!.env.example
+.srm-chrome-session/
+.srm-session/
+attendance.json
+# Inspected legacy Playwright experiment; intentionally retained locally only.
+scraper.py
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node and frontend build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local services and editor state
+.DS_Store
+.idea/
+.vscode/
+postgres-data/
