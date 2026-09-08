@@ -4,7 +4,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 
 ## Current milestone
 
-**Milestone 1 — verified domain core and backend foundation** is in progress.
+**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is the strict, fixture-driven SRM attendance parser.
 
 ## Completed work
 
@@ -12,6 +12,9 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 - Initialized Git and added a safety-focused `.gitignore`. Local Chrome profiles, portal output, secrets, virtual environments, and build artifacts are excluded.
 - Recorded the approved architecture and phased implementation plan.
 - Added the executable, test-first Milestone 1 plan at `docs/superpowers/plans/2026-09-09-backend-foundation.md`.
+- Created the reproducible backend package at `backend/`, a Python 3.13 lock file, non-secret `.env.example`, and strict test/lint/type-check configuration.
+- Test-drove the settings contract. It reads `SRM_TRACKER_` values, normalizes a trailing frontend-origin slash, and rejects non-HTTPS frontend origins in production.
+- Diagnosed a transient Windows installer file lock caused by an earlier still-running package installation. A single retry after the process exited installed the missing packages; `pip check` reported no broken requirements.
 
 ## Architecture decisions
 
@@ -42,6 +45,15 @@ git log --oneline -5
 
 After dependencies are created, use the commands recorded in the relevant milestone of `docs/IMPLEMENTATION_PLAN.md`; do not run the legacy Playwright scraper.
 
+Current backend commands:
+
+```powershell
+Set-Location C:\Users\varug\Attendance-extractor\backend
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m mypy src
+```
+
 ## Verification results
 
 | Check | Result | Notes |
@@ -49,7 +61,11 @@ After dependencies are created, use the commands recorded in the relevant milest
 | Initial repository inspection | Completed | No existing test suite or application manifests were found. |
 | Legacy dependency inspection | Completed | Local virtual environment contains Playwright 1.62.0 and Beautiful Soup 4.15.0. |
 | Baseline automated tests | Not available | No test files or test runner configuration existed at inspection time. |
-| Git ignore safety check | Pending | Runs with the initial documentation checkpoint. |
+| Settings tests | Passed | 3 passed (`backend/tests/test_config.py`) after red–green verification. |
+| Ruff | Passed | `ruff check src tests` exited 0. |
+| Mypy | Passed | Strict check of 2 source files exited 0. |
+| Dependency integrity | Passed | `pip check` reported no broken requirements. |
+| Git ignore safety check | Passed | Chrome profiles, legacy scraper, root virtual environment, and backend virtual environment are ignored. |
 
 ## Deployment state
 
