@@ -28,6 +28,7 @@
 - Create: `backend/src/srm_tracker/__init__.py`
 - Create: `backend/src/srm_tracker/config.py`
 - Create: `backend/tests/conftest.py`
+- Create: `backend/tests/test_config.py`
 - Create: `.env.example`
 - Modify: `.gitignore`
 
@@ -39,7 +40,23 @@
 
 Create `backend/pyproject.toml` with a `src` package layout and pinned compatible direct dependencies: `fastapi`, `uvicorn[standard]`, `pydantic-settings`, `beautifulsoup4`, `pytest`, `httpx`, `ruff`, and `mypy`. Configure `pytest` to collect `tests`, Ruff for Python 3.13, and mypy with `strict = true` for `src/srm_tracker`.
 
-- [ ] **Step 2: Create minimum environment contract**
+- [ ] **Step 2: Write the failing settings behavior tests**
+
+Create a test which supplies a development environment mapping and asserts the three configured values are read, plus a test which supplies `production` with `http://localhost:5173` and asserts validation fails. The test must clear the settings cache between cases.
+
+```python
+def test_rejects_http_frontend_origin_in_production() -> None:
+    with pytest.raises(ValidationError, match="HTTPS"):
+        Settings(environment="production", frontend_origin="http://localhost:5173")
+```
+
+- [ ] **Step 3: Run the settings tests to verify they fail because the module is missing**
+
+Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_config.py -q`
+
+Expected: FAIL during collection with `ModuleNotFoundError` for `srm_tracker.config`.
+
+- [ ] **Step 4: Implement the minimum environment contract**
 
 Create `.env.example` containing only non-secret development placeholders:
 
@@ -51,17 +68,17 @@ SRM_TRACKER_FRONTEND_ORIGIN=http://localhost:5173
 
 Add an ignore rule for local backend virtual environments and a runtime `.env` file if not already covered.
 
-- [ ] **Step 3: Install locked dependencies and verify tooling is executable**
+- [ ] **Step 5: Install locked dependencies and verify tooling is executable**
 
 Run: `cd backend; python -m venv .venv; .\.venv\Scripts\python.exe -m pip install --upgrade pip; .\.venv\Scripts\python.exe -m pip install -e ".[dev]"`
 
 Expected: package installation succeeds and `backend/.venv` remains ignored.
 
-- [ ] **Step 4: Verify the empty test/tool baseline**
+- [ ] **Step 6: Verify the Task 1 baseline**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest; .\.venv\Scripts\python.exe -m ruff check .; .\.venv\Scripts\python.exe -m mypy src`
 
-Expected: Pytest reports no collected tests (exit code 5 is recorded as expected until Task 2); Ruff and mypy exit 0.
+Expected: configuration tests, Ruff, and mypy exit 0.
 
 ### Task 2: Strict attendance HTML parser
 
