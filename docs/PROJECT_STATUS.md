@@ -4,7 +4,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 
 ## Current milestone
 
-**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is the strict, fixture-driven SRM attendance parser.
+**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is test-driven attendance-target calculations.
 
 ## Completed work
 
@@ -16,6 +16,8 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 - Test-drove the settings contract. It reads `SRM_TRACKER_` values, normalizes a trailing frontend-origin slash, and rejects non-HTTPS frontend origins in production.
 - Diagnosed a transient Windows installer file lock caused by an earlier still-running package installation. A single retry after the process exited installed the missing packages; `pip check` reported no broken requirements.
 - Removed generated editable-install `.egg-info` metadata from Git and added an ignore rule so future package setup does not pollute commits.
+- Test-drove the strict, local HTML parser with sanitized fixtures. It finds the documented six-column table by exact normalized headers and returns typed cumulative subject records.
+- Added rejection tests for login markup, missing attendance tables, fractional/invalid source hours, and inconsistent attended-plus-absent totals. No live SRM request has been made.
 
 ## Architecture decisions
 
@@ -62,9 +64,9 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 | Initial repository inspection | Completed | No existing test suite or application manifests were found. |
 | Legacy dependency inspection | Completed | Local virtual environment contains Playwright 1.62.0 and Beautiful Soup 4.15.0. |
 | Baseline automated tests | Not available | No test files or test runner configuration existed at inspection time. |
-| Settings tests | Passed | 3 passed (`backend/tests/test_config.py`) after red–green verification. |
-| Ruff | Passed | `ruff check src tests` exited 0. |
-| Mypy | Passed | Strict check of 2 source files exited 0. |
+| Backend tests | Passed | 8 passed: settings plus strict parser behavior and rejection cases. |
+| Ruff | Passed | `ruff check .` exited 0. |
+| Mypy | Passed | Strict check of 5 source files exited 0. |
 | Dependency integrity | Passed | `pip check` reported no broken requirements. |
 | Git ignore safety check | Passed | Chrome profiles, legacy scraper, root virtual environment, and backend virtual environment are ignored. |
 

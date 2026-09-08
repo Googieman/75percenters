@@ -96,7 +96,7 @@ Expected: configuration tests, Ruff, and mypy exit 0.
 - Produces: `parse_attendance_html(html: str) -> list[AttendanceRecord]`.
 - Produces: `AttendanceParseError(ValueError)` for non-attendance, malformed, and invalid numeric responses.
 
-- [ ] **Step 1: Write the failing parser behavior tests**
+- [x] **Step 1: Write the failing parser behavior tests**
 
 Create sanitized fixture HTML with the exact header sequence `Code`, `Description`, `Max. hours`, `Attended hours`, `Absent hours`, `Total Percentage`. Write tests that assert a two-row fixture becomes typed records, an unrelated table is ignored, login markup raises `AttendanceParseError`, a table with no usable rows raises, values such as `23.5` for total hours raise, and a row where attended plus absent does not equal total raises.
 
@@ -112,17 +112,17 @@ def test_rejects_login_page(login_html: str) -> None:
         parse_attendance_html(login_html)
 ```
 
-- [ ] **Step 2: Run parser tests to verify they fail because the module is missing**
+- [x] **Step 2: Run parser tests to verify they fail because the module is missing**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_attendance_parser.py -q`
 
 Expected: FAIL during collection with `ModuleNotFoundError` for `srm_tracker.attendance`.
 
-- [ ] **Step 3: Implement the smallest strict parser**
+- [x] **Step 3: Implement the smallest strict parser**
 
 Implement header normalization, exact ordered-header matching, cell-count validation, non-empty code/subject validation, integer parsing that rejects decimal/negative values, decimal percentage parsing (allow an optional trailing `%`), and the `attended + absent == total` invariant. Detect an HTML login form/title before table scanning and use `AttendanceParseError`; never return an empty list for an invalid response.
 
-- [ ] **Step 4: Run parser tests and quality checks**
+- [x] **Step 4: Run parser tests and quality checks**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_attendance_parser.py -q; .\.venv\Scripts\python.exe -m ruff check src tests; .\.venv\Scripts\python.exe -m mypy src`
 
