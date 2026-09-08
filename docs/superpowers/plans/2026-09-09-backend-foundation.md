@@ -139,29 +139,29 @@ Expected: parser tests, Ruff, and mypy exit 0.
 - Produces: frozen `AttendanceGuidance(current_percentage: Decimal | None, additional_attended_hours: int | None, additional_absences_allowed: int | None, target_reachable: bool)`.
 - Produces: `calculate_attendance_guidance(attended_hours: int, total_hours: int, target_percentage: Decimal) -> AttendanceGuidance`.
 
-- [ ] **Step 1: Write failing calculation tests**
+- [x] **Step 1: Write failing calculation tests**
 
-Write tests covering zero total hours, exactly 75%, a 16/23 record at 75%, an above-target record, a 100% target with imperfect attendance, a perfect 100% record, and invalid targets (0, negative, greater than 100). Assert the documented answers, including 7 extra attended hours for 16/23 at 75% and 0 allowable further absences there.
+Write tests covering zero total hours, exactly 75%, a 16/23 record at 75%, an above-target record, a 100% target with imperfect attendance, a perfect 100% record, and invalid targets (0, negative, greater than 100). Assert the documented answers, including 5 extra attended hours for 16/23 at 75% and 0 allowable further absences there.
 
 ```python
 def test_calculates_hours_needed_below_target() -> None:
     result = calculate_attendance_guidance(16, 23, Decimal("75"))
-    assert result.additional_attended_hours == 7
+    assert result.additional_attended_hours == 5
     assert result.additional_absences_allowed == 0
     assert result.target_reachable is True
 ```
 
-- [ ] **Step 2: Run calculation tests to verify they fail because the service is missing**
+- [x] **Step 2: Run calculation tests to verify they fail because the service is missing**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_attendance_calculations.py -q`
 
 Expected: FAIL during collection with `ModuleNotFoundError` for `calculations`.
 
-- [ ] **Step 3: Implement integer-safe calculation logic**
+- [x] **Step 3: Implement integer-safe calculation logic**
 
 Use `Decimal` and explicit ceiling/floor helpers. Reject negative hours and an `attended_hours` value greater than `total_hours`. For zero total, return `None` numerical guidance and `target_reachable = false`; for non-perfect 100% targets return `additional_attended_hours = None` and `target_reachable = false`; otherwise return exact non-negative integers.
 
-- [ ] **Step 4: Run calculation tests and quality checks**
+- [x] **Step 4: Run calculation tests and quality checks**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_attendance_calculations.py -q; .\.venv\Scripts\python.exe -m ruff check src tests; .\.venv\Scripts\python.exe -m mypy src`
 

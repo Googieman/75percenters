@@ -14,7 +14,7 @@ A Chrome Manifest V3 extension is the sole SRM connector. After an explicit user
 
 `User` owns `Subject`, `AttendanceSnapshot`, `PairingCode`, and `ConnectorDevice` records. Subject codes are unique per user. Each successful sync is normalized to integer source totals and stored only when a subject’s totals change; unchanged submissions update the device’s last-seen metadata without fabricating history. Source percentage may be retained for audit but dashboard calculations derive from attended and total hours.
 
-For target `T` (0 < T <= 100), current attendance is `A / H` where `A` is attended hours and `H` is total hours. Additional attended hours to reach target are `max(0, ceil((T*H-A)/(1-T)))` for T < 100; at 100%, a non-perfect record is impossible to repair with finite additional attended hours. Additional absences allowed are `max(0, floor(A/T-H))`. Zero total hours has no percentage or target recommendation.
+For target `T` (0 < T <= 100), current attendance is `A / H` where `A` is attended hours and `H` is total hours. The displayed percentage is rounded half-up to two decimal places, but target decisions use unrounded totals. Additional attended hours to reach target are `max(0, ceil((T*H-A)/(1-T)))` for T < 100; at 100%, a non-perfect record is impossible to repair with finite additional attended hours. Additional absences allowed are `max(0, floor(A/T-H))`. Zero total hours has no percentage or target recommendation.
 
 ## Security
 

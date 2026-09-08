@@ -4,7 +4,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 
 ## Current milestone
 
-**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is test-driven attendance-target calculations.
+**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is the FastAPI application factory and versioned health endpoint.
 
 ## Completed work
 
@@ -18,6 +18,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 - Removed generated editable-install `.egg-info` metadata from Git and added an ignore rule so future package setup does not pollute commits.
 - Test-drove the strict, local HTML parser with sanitized fixtures. It finds the documented six-column table by exact normalized headers and returns typed cumulative subject records.
 - Added rejection tests for login markup, missing attendance tables, fractional/invalid source hours, and inconsistent attended-plus-absent totals. No live SRM request has been made.
+- Test-drove target calculations for empty totals, exact/below/above target, 100% edge cases, invalid targets, and two-decimal display rounding. Guidance uses unrounded totals for decisions: 16 attended out of 23 needs 5 attended hours to reach 75% and displays 69.57%.
 
 ## Architecture decisions
 
@@ -64,9 +65,9 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 | Initial repository inspection | Completed | No existing test suite or application manifests were found. |
 | Legacy dependency inspection | Completed | Local virtual environment contains Playwright 1.62.0 and Beautiful Soup 4.15.0. |
 | Baseline automated tests | Not available | No test files or test runner configuration existed at inspection time. |
-| Backend tests | Passed | 8 passed: settings plus strict parser behavior and rejection cases. |
+| Backend tests | Passed | 18 passed: settings, strict parser behavior, and target-calculation edge cases. |
 | Ruff | Passed | `ruff check .` exited 0. |
-| Mypy | Passed | Strict check of 5 source files exited 0. |
+| Mypy | Passed | Strict check of 6 source files exited 0. |
 | Dependency integrity | Passed | `pip check` reported no broken requirements. |
 | Git ignore safety check | Passed | Chrome profiles, legacy scraper, root virtual environment, and backend virtual environment are ignored. |
 
