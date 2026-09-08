@@ -4,7 +4,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 
 ## Current milestone
 
-**Milestone 1 — verified domain core and backend foundation** is in progress. The next task is the FastAPI application factory and versioned health endpoint.
+**Milestone 1 — verified domain core and backend foundation** is complete. **Milestone 2 — persistence, authentication, secure pairing, and ingestion** is next and has not started.
 
 ## Completed work
 
@@ -19,6 +19,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 - Test-drove the strict, local HTML parser with sanitized fixtures. It finds the documented six-column table by exact normalized headers and returns typed cumulative subject records.
 - Added rejection tests for login markup, missing attendance tables, fractional/invalid source hours, and inconsistent attended-plus-absent totals. No live SRM request has been made.
 - Test-drove target calculations for empty totals, exact/below/above target, 100% edge cases, invalid targets, and two-decimal display rounding. Guidance uses unrounded totals for decisions: 16 attended out of 23 needs 5 attended hours to reach 75% and displays 69.57%.
+- Added the FastAPI application factory and a versioned, database-free `GET /api/v1/health` endpoint. Its HTTP behavior is tested with HTTPX’s ASGI transport, avoiding deprecated test-wrapper warnings.
 
 ## Architecture decisions
 
@@ -29,12 +30,11 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 
 ## Remaining milestones
 
-1. Implement and test parser, attendance target calculations, and initial FastAPI project scaffolding.
-2. Add migrations, authenticated account bootstrap, ownership enforcement, snapshots, pairing, secure ingestion, and API integration tests.
-3. Build the PWA dashboard, subject history, offline cached-data labeling, and component/end-to-end tests.
-4. Build and package the MV3 extension; verify its portal behavior manually while the user is logged in normally.
-5. Complete documentation, production checks, Render Blueprint, and secure environment configuration.
-6. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
+1. Add migrations, authenticated account bootstrap, ownership enforcement, snapshots, pairing, secure ingestion, and API integration tests.
+2. Build the PWA dashboard, subject history, offline cached-data labeling, and component/end-to-end tests.
+3. Build and package the MV3 extension; verify its portal behavior manually while the user is logged in normally.
+4. Complete documentation, production checks, Render Blueprint, and secure environment configuration.
+5. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
 
 ## Exact commands to resume
 
@@ -65,11 +65,22 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 | Initial repository inspection | Completed | No existing test suite or application manifests were found. |
 | Legacy dependency inspection | Completed | Local virtual environment contains Playwright 1.62.0 and Beautiful Soup 4.15.0. |
 | Baseline automated tests | Not available | No test files or test runner configuration existed at inspection time. |
-| Backend tests | Passed | 18 passed: settings, strict parser behavior, and target-calculation edge cases. |
+| Backend tests | Passed | 20 passed: settings, strict parser behavior, target-calculation edge cases, and health-endpoint HTTP behavior. |
 | Ruff | Passed | `ruff check .` exited 0. |
-| Mypy | Passed | Strict check of 6 source files exited 0. |
+| Mypy | Passed | Strict check of 7 source files exited 0. |
 | Dependency integrity | Passed | `pip check` reported no broken requirements. |
 | Git ignore safety check | Passed | Chrome profiles, legacy scraper, root virtual environment, and backend virtual environment are ignored. |
+
+Last Milestone 1 verification commands:
+
+```powershell
+Set-Location C:\Users\varug\Attendance-extractor\backend
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m mypy src
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -c "from srm_tracker.main import create_app; assert create_app().title == 'SRM Attendance Tracker API'"
+```
 
 ## Deployment state
 

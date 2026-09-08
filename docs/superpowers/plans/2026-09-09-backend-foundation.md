@@ -177,7 +177,7 @@ Expected: calculation tests, Ruff, and mypy exit 0.
 - Consumes: `Settings` from `srm_tracker.config`.
 - Produces: `create_app() -> FastAPI` and `GET /api/v1/health` returning `{"status": "ok"}`.
 
-- [ ] **Step 1: Write the failing HTTP test**
+- [x] **Step 1: Write the failing HTTP test**
 
 ```python
 def test_health_endpoint_returns_ok() -> None:
@@ -186,17 +186,17 @@ def test_health_endpoint_returns_ok() -> None:
     assert response.json() == {"status": "ok"}
 ```
 
-- [ ] **Step 2: Run the test to verify it fails because the application factory is missing**
+- [x] **Step 2: Run the test to verify it fails because the application factory is missing**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest tests/test_health.py -q`
 
 Expected: FAIL during collection with `ModuleNotFoundError` for `srm_tracker.main`.
 
-- [ ] **Step 3: Implement minimal settings and app factory**
+- [x] **Step 3: Implement minimal settings and app factory**
 
 Implement a cached settings getter with the `SRM_TRACKER_` prefix, reject non-HTTPS frontend origins in production, and return the health payload without database access or secret values. Register the route under the versioned API prefix.
 
-- [ ] **Step 4: Run the full Milestone 1 verification suite**
+- [x] **Step 4: Run the full Milestone 1 verification suite**
 
 Run: `cd backend; .\.venv\Scripts\python.exe -m pytest -q; .\.venv\Scripts\python.exe -m ruff check .; .\.venv\Scripts\python.exe -m mypy src; .\.venv\Scripts\python.exe -c "from srm_tracker.main import create_app; assert create_app().title == 'SRM Attendance Tracker API'"`
 
@@ -208,17 +208,17 @@ Expected: all test commands and import assertion exit 0.
 - Modify: `docs/PROJECT_STATUS.md`
 - Modify: `docs/IMPLEMENTATION_PLAN.md`
 
-- [ ] **Step 1: Record exact tool and test results**
+- [x] **Step 1: Record exact tool and test results**
 
 Update the status file with dependency versions, exact verification commands, result counts, current commit, and the next unfinished milestone.
 
-- [ ] **Step 2: Review repository safety and whitespace**
+- [x] **Step 2: Review repository safety and whitespace**
 
 Run: `git check-ignore -v .srm-chrome-session\Default .srm-session\Default venv\Scripts\python.exe backend\.venv\Scripts\python.exe; git diff --check; git status --short`
 
 Expected: all sensitive/local paths are ignored, `git diff --check` has no output, and only intentional source/docs changes are present.
 
-- [ ] **Step 3: Commit the verified milestone**
+- [x] **Step 3: Commit the verified milestone**
 
 ```powershell
 git add .gitignore .env.example backend docs
