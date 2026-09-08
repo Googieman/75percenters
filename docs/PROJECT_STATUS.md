@@ -11,6 +11,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 - Inspected the initial workspace. It contained only `scraper.py`, two local Chrome-profile directories, and a Python virtual environment; no Git repository, attendance fixture, Chrome extension, frontend, backend, or test suite existed.
 - Initialized Git and added a safety-focused `.gitignore`. Local Chrome profiles, portal output, secrets, virtual environments, and build artifacts are excluded.
 - Recorded the approved architecture and phased implementation plan.
+- Added the executable, test-first Milestone 1 plan at `docs/superpowers/plans/2026-09-09-backend-foundation.md`.
 
 ## Architecture decisions
 
@@ -34,6 +35,7 @@ Last updated: 2026-09-09 (Asia/Kolkata)
 Set-Location C:\Users\varug\Attendance-extractor
 Get-Content -Raw docs\PROJECT_STATUS.md
 Get-Content -Raw docs\IMPLEMENTATION_PLAN.md
+Get-Content -Raw docs\superpowers\plans\2026-09-09-backend-foundation.md
 git status --short
 git log --oneline -5
 ```
