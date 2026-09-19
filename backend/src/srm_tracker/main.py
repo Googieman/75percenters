@@ -6,6 +6,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import sessionmaker
 
+from srm_tracker.attendance_api import router as attendance_router
 from srm_tracker.auth import router as auth_router
 from srm_tracker.config import Settings, get_settings
 from srm_tracker.db import session_factory_for_engine
@@ -35,6 +36,7 @@ def create_app(
     )
     app.include_router(auth_router)
     app.include_router(pairing_router)
+    app.include_router(attendance_router)
 
     @app.get("/api/v1/health")
     def health() -> dict[str, str]:
