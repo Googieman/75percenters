@@ -1,14 +1,14 @@
 """Create the authenticated attendance schema."""
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "0001_initial"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 UTC_NOW = sa.text("timezone('utc', now())")
@@ -20,7 +20,9 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("email", sa.String(length=320), nullable=False),
         sa.Column("password_hash", sa.String(length=512), nullable=False),
-        sa.Column("attendance_target", sa.Numeric(5, 2), server_default=sa.text("75.00"), nullable=False),
+        sa.Column(
+            "attendance_target", sa.Numeric(5, 2), server_default=sa.text("75.00"), nullable=False
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=UTC_NOW, nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=UTC_NOW, nullable=False),
         sa.UniqueConstraint("email", name="uq_users_email"),
@@ -65,7 +67,9 @@ def upgrade() -> None:
         sa.Column("attended_hours", sa.Integer(), nullable=False),
         sa.Column("absent_hours", sa.Integer(), nullable=False),
         sa.Column("source_percentage", sa.Numeric(5, 2), nullable=False),
-        sa.Column("recorded_at", sa.DateTime(timezone=True), server_default=UTC_NOW, nullable=False),
+        sa.Column(
+            "recorded_at", sa.DateTime(timezone=True), server_default=UTC_NOW, nullable=False
+        ),
         sa.ForeignKeyConstraint(["subject_id"], ["subjects.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_attendance_snapshots_subject_id", "attendance_snapshots", ["subject_id"])

@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from typing import Any
 
+from fastapi import Request
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
@@ -42,6 +43,19 @@ def get_db(session_factory: sessionmaker[DbSession]) -> Iterator[DbSession]:
         yield session
     finally:
         session.close()
+
+
+def get_request_db(request: Request) -> Iterator[DbSession]:
+    """Resolve the app's injectable session factory lazily for health-only startup."""
+    factory = request.app.state.session_factory
+    if factory is None:
+        from srm_tracker.config import get_settings
+
+        engine = create_engine_from_settings(get_settings())
+        factory = session_factory_for_engine(engine)
+        request.app.state.session_factory = factory
+        request.app.state.database_engine = engine
+    yield from get_db(factory)
 
 
 def model_dict(model: Any) -> dict[str, Any]:
