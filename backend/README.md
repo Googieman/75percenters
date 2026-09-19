@@ -9,7 +9,7 @@ From the repository root, start the local database and install the backend:
 ```powershell
 docker compose up -d postgres
 Set-Location backend
-Copy-Item ..\\.env.example .env
+Copy-Item ..\.env.example .env
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 .\.venv\Scripts\python.exe -m alembic upgrade head
