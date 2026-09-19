@@ -6,7 +6,7 @@ This plan is intentionally milestone-based so every session can end at a clean, 
 
 - Never automate login, CAPTCHA, browser fingerprint changes, or cookie/profile export. Do not run `scraper.py`.
 - Do not commit sensitive portal responses, browser profiles, `.env` files, credentials, session tokens, or device credentials.
-- Tests use sanitized fixtures and mocks only; live SRM validation is a separate manual action.
+- Tests use sanitized fixtures and a disposable local PostgreSQL database only; live SRM validation is a separate manual action.
 - Each milestone must update `docs/PROJECT_STATUS.md`, run its stated checks, and be committed before moving on.
 
 ## Milestone 0 — Repository control plane
@@ -27,15 +27,15 @@ This plan is intentionally milestone-based so every session can end at a clean, 
 4. Add FastAPI configuration and a health endpoint; run backend tests, linting, type checks, and a production import/build check.
 5. Update status and commit.
 
-## Milestone 2 — Persistence, secure API, and connector pairing
+## Milestone 2 — Persistence, secure API, and connector pairing — complete
 
-**Deliverable:** PostgreSQL/Alembic data model with user isolation, snapshot idempotency, first-user bootstrap, protected reads, one-time pairing, device revocation, and validated ingestion.
+**Deliverable:** PostgreSQL/Alembic data model with user isolation, snapshot idempotency, first-user bootstrap, protected reads, one-time pairing, device revocation, and validated ingestion. Verified with 44 integration tests against disposable PostgreSQL, Ruff, mypy, pip check, and the migration upgrade/downgrade/re-upgrade cycle.
 
 1. Test-drive models and services for subject ownership, snapshots, duplicate handling, and genuine change history.
 2. Add Alembic migrations and local PostgreSQL Compose workflow.
-3. Add mature password hashing/session support, CSRF protection for cookie-authenticated writes, rate limits, strict configured CORS, and secure environment validation.
-4. Test-drive pairing expiry, device-token hashing, revocation, malformed ingestion rejection, and cross-user authorization failures.
-5. Run API integration tests against a disposable database; update status and commit.
+3. Add Argon2 password hashing/session support, CSRF protection for cookie-authenticated writes, database-backed rate limits, strict configured CORS, and secure environment validation.
+4. Test-drive pairing expiry, device-token hashing, revocation, malformed ingestion rejection, concurrent serialization, and cross-user authorization failures.
+5. Run the fixture bootstrap → login → pair → upload → history → revoke flow against a disposable database; update status and commit.
 
 ## Milestone 3 — Responsive PWA dashboard
 

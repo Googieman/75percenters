@@ -1,4 +1,4 @@
-# Generated for the Python 3.13 Windows development environment on 2026-09-09.
+# Generated for the Python 3.13 Windows development environment on 2026-09-20.
 # Install the application itself with: python -m pip install -e ".[dev]"
 alembic==1.20.0
 annotated-doc==0.0.5

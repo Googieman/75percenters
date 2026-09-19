@@ -65,14 +65,17 @@ def app_client(database_session_factory: sessionmaker[Session]) -> Iterator[Any]
 
     class Client:
         def __init__(self) -> None:
+            self.app = app
             self.cookies: dict[str, str] = {}
 
         def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+            base_url = kwargs.pop("_base_url", "http://testserver")
+
             async def send() -> httpx.Response:
-                transport = httpx.ASGITransport(app=app)
+                transport = httpx.ASGITransport(app=self.app)
                 async with httpx.AsyncClient(
                     transport=transport,
-                    base_url="http://testserver",
+                    base_url=base_url,
                     cookies=self.cookies,
                 ) as client:
                     return await client.request(method, url, **kwargs)

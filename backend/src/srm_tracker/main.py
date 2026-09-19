@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import sessionmaker
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from srm_tracker.attendance_api import router as attendance_router
 from srm_tracker.auth import router as auth_router
@@ -34,6 +35,8 @@ def create_app(
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization", "X-CSRF-Token"],
     )
+    if settings.environment == "production":
+        app.add_middleware(HTTPSRedirectMiddleware)
     app.include_router(auth_router)
     app.include_router(pairing_router)
     app.include_router(attendance_router)
