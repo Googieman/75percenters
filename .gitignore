@@ -31,3 +31,6 @@ coverage/
 .idea/
 .vscode/
 postgres-data/
+
+# Superpowers execution artifacts
+.superpowers/

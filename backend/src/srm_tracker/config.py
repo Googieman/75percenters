@@ -19,8 +19,14 @@ class Settings(BaseSettings):
     )
 
     environment: Environment = "development"
-    database_url: str
-    frontend_origin: str
+    database_url: str = "postgresql+psycopg://srm_tracker:srm_tracker@localhost:5433/srm_tracker"
+    frontend_origin: str = "http://localhost:5173"
+    session_cookie_name: str = "srm_tracker_session"
+    session_ttl_days: int = 7
+    pairing_ttl_minutes: int = 10
+    login_rate_limit_attempts: int = 5
+    pairing_rate_limit_attempts: int = 10
+    rate_limit_window_seconds: int = 900
 
     @field_validator("frontend_origin")
     @classmethod
@@ -31,8 +37,22 @@ class Settings(BaseSettings):
             raise ValueError("Production frontend origin must use HTTPS")
         return value.rstrip("/")
 
+    @field_validator("session_ttl_days", "pairing_ttl_minutes", "rate_limit_window_seconds")
+    @classmethod
+    def positive_duration(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("duration settings must be positive")
+        return value
+
+    @field_validator("login_rate_limit_attempts", "pairing_rate_limit_attempts")
+    @classmethod
+    def positive_rate_limit(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("rate limit settings must be positive")
+        return value
+
 
 @lru_cache
 def get_settings() -> Settings:
     """Return the process-wide validated settings instance."""
-    return Settings()  # type: ignore[call-arg]  # Required values are read from the environment.
+    return Settings()
