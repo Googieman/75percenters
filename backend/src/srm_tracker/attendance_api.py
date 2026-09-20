@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DbSession
 
 from srm_tracker.attendance.calculations import AttendanceGuidance, calculate_attendance_guidance
@@ -14,7 +14,7 @@ from srm_tracker.attendance_service import UploadAuthenticationError, process_up
 from srm_tracker.auth import AuthContext, get_current_auth, require_csrf
 from srm_tracker.config import Settings
 from srm_tracker.db import get_request_db
-from srm_tracker.db_models import AttendanceSnapshot, ConnectorDevice, Subject
+from srm_tracker.db_models import AttendanceSnapshot, Subject
 from srm_tracker.pairing import ConnectorContext, get_connector_context
 from srm_tracker.schemas import (
     AttendanceResponse,
@@ -38,9 +38,7 @@ def _settings(request: Request) -> Settings:
 def _guidance(guidance: AttendanceGuidance) -> GuidanceResponse:
     return GuidanceResponse(
         current_percentage=(
-            float(guidance.current_percentage)
-            if guidance.current_percentage is not None
-            else None
+            float(guidance.current_percentage) if guidance.current_percentage is not None else None
         ),
         additional_attended_hours=guidance.additional_attended_hours,
         additional_absences_allowed=guidance.additional_absences_allowed,
@@ -107,18 +105,13 @@ def get_attendance(
         total_hours,
         context.user.attendance_target,
     )
-    last_successful_sync = session.scalar(
-        select(func.max(ConnectorDevice.last_seen_at)).where(
-            ConnectorDevice.user_id == context.user.id
-        )
-    )
     return AttendanceResponse(
         attendance_target=float(context.user.attendance_target),
         subjects=[
             _subject_response(subject, context.user.attendance_target) for subject in subjects
         ],
         overall=_guidance(overall),
-        last_successful_sync=last_successful_sync,
+        last_successful_sync=context.user.last_successful_sync_at,
     )
 
 
@@ -139,9 +132,7 @@ def subject_history(
     query = select(AttendanceSnapshot).where(AttendanceSnapshot.subject_id == subject.id)
     if cursor is not None:
         query = query.where(AttendanceSnapshot.id < _decode_cursor(cursor))
-    snapshots = session.scalars(
-        query.order_by(AttendanceSnapshot.id.desc()).limit(limit + 1)
-    ).all()
+    snapshots = session.scalars(query.order_by(AttendanceSnapshot.id.desc()).limit(limit + 1)).all()
     items = snapshots[:limit]
     next_cursor = _cursor(items[-1].id) if len(snapshots) > limit else None
     return HistoryResponse(

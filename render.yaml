@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: srm-attendance-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.lock && pip install .
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn srm_tracker.main:create_app --factory --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: SRM_TRACKER_DATABASE_URL
+        fromDatabase:
+          name: srm-attendance-db
+          property: connectionString
+      - key: SRM_TRACKER_ENVIRONMENT
+        value: production
+      - key: SRM_TRACKER_FRONTEND_ORIGIN
+        value: https://srm-attendance.vercel.app
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_KEY
+        sync: false
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_KEY_VERSION
+        value: "1"
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS
+        value: "{}"
+      - key: SRM_TRACKER_ACQUISITION_ENABLED
+        value: "false"
+      - key: SRM_TRACKER_WEB_PUSH_PUBLIC_KEY
+        sync: false
+      - key: SRM_TRACKER_WEB_PUSH_PRIVATE_KEY
+        sync: false
+      - key: SRM_TRACKER_WEB_PUSH_SUBJECT
+        sync: false
+
+  - type: worker
+    name: srm-attendance-worker
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.lock && pip install .
+    startCommand: python -m srm_tracker.worker_entrypoint
+    envVars:
+      - key: SRM_TRACKER_DATABASE_URL
+        fromDatabase:
+          name: srm-attendance-db
+          property: connectionString
+      - key: SRM_TRACKER_ENVIRONMENT
+        value: production
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_KEY
+        sync: false
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_KEY_VERSION
+        value: "1"
+      - key: SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS
+        value: "{}"
+      - key: SRM_TRACKER_ACQUISITION_ENABLED
+        value: "false"
+      - key: SRM_TRACKER_WEB_PUSH_PUBLIC_KEY
+        sync: false
+      - key: SRM_TRACKER_WEB_PUSH_PRIVATE_KEY
+        sync: false
+      - key: SRM_TRACKER_WEB_PUSH_SUBJECT
+        sync: false
+
+databases:
+  - name: srm-attendance-db
+    plan: basic-256mb
+    region: oregon

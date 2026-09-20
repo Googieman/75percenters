@@ -25,6 +25,20 @@ def test_rejects_http_frontend_origin_in_production() -> None:
         )
 
 
+def test_production_requires_separate_session_encryption_key() -> None:
+    with pytest.raises(ValidationError, match="encryption key"):
+        Settings(
+            environment="production",
+            database_url="postgresql+psycopg://user:password@db:5432/srm_tracker",
+            frontend_origin="https://tracker.example.com",
+        )
+
+
+def test_rejects_invalid_session_encryption_key_material() -> None:
+    with pytest.raises(ValidationError, match="32 bytes"):
+        Settings(session_encryption_key="not-a-session-key")
+
+
 def test_reads_prefixed_environment_through_cached_loader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

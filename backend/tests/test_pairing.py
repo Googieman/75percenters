@@ -70,13 +70,19 @@ def test_expired_pairing_code_and_rate_limit_are_rejected(
         session.commit()
 
     client = app_client
-    assert client.request(  # type: ignore[union-attr]
-        "POST", "/api/v1/connector/pair", json={"code": "expired-code"}
-    ).status_code == 400
+    assert (
+        client.request(  # type: ignore[union-attr]
+            "POST", "/api/v1/connector/pair", json={"code": "expired-code"}
+        ).status_code
+        == 400
+    )
     for _ in range(9):
-        assert client.request(  # type: ignore[union-attr]
-            "POST", "/api/v1/connector/pair", json={"code": "not-a-code"}
-        ).status_code == 400
+        assert (
+            client.request(  # type: ignore[union-attr]
+                "POST", "/api/v1/connector/pair", json={"code": "not-a-code"}
+            ).status_code
+            == 400
+        )
     limited = client.request(  # type: ignore[union-attr]
         "POST", "/api/v1/connector/pair", json={"code": "not-a-code"}
     )
@@ -118,9 +124,7 @@ def test_foreign_device_id_is_not_disclosed(
 ) -> None:
     with database_session_factory() as session:  # type: ignore[operator]
         bootstrap_account(session, "owner@example.com", "a-very-long-password")
-        session.add(
-            User(email="other@example.com", password_hash="not-used-for-this-test")
-        )
+        session.add(User(email="other@example.com", password_hash="not-used-for-this-test"))
         session.commit()
 
     client = app_client
@@ -133,9 +137,12 @@ def test_foreign_device_id_is_not_disclosed(
         "POST", "/api/v1/connector/pair", json={"code": code}
     )
     device_id = paired.json()["device_id"]
-    assert client.request(  # type: ignore[union-attr]
-        "DELETE", f"/api/v1/devices/{device_id + 1}", headers={"X-CSRF-Token": csrf}
-    ).status_code == 404
+    assert (
+        client.request(  # type: ignore[union-attr]
+            "DELETE", f"/api/v1/devices/{device_id + 1}", headers={"X-CSRF-Token": csrf}
+        ).status_code
+        == 404
+    )
 
 
 def test_revocation_is_immediate(
@@ -160,6 +167,9 @@ def test_revocation_is_immediate(
     )
     assert revoked.status_code == 204
     client.cookies.clear()  # type: ignore[union-attr]
-    assert client.request(  # type: ignore[union-attr]
-        "GET", "/api/v1/devices", headers={"Authorization": f"Bearer {paired['device_token']}"}
-    ).status_code == 401
+    assert (
+        client.request(  # type: ignore[union-attr]
+            "GET", "/api/v1/devices", headers={"Authorization": f"Bearer {paired['device_token']}"}
+        ).status_code
+        == 401
+    )

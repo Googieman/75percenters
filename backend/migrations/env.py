@@ -1,5 +1,6 @@
 """Alembic migration environment."""
 
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -9,6 +10,9 @@ from srm_tracker import db_models  # noqa: F401  # Register model metadata.
 from srm_tracker.db import Base
 
 config = context.config
+configured_database_url = os.getenv("SRM_TRACKER_DATABASE_URL")
+if configured_database_url:
+    config.set_main_option("sqlalchemy.url", configured_database_url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 

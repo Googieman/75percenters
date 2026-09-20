@@ -9,6 +9,12 @@ This plan is intentionally milestone-based so every session can end at a clean, 
 - Tests use sanitized fixtures and a disposable local PostgreSQL database only; live SRM validation is a separate manual action.
 - Each milestone must update `docs/PROJECT_STATUS.md`, run its stated checks, and be committed before moving on.
 
+## Phone-first redesign addendum — provider-gated
+
+The phone-first redesign in `docs/PHONE_FIRST_ACQUISITION.md` supersedes the assumption that the desktop connector is the production acquisition path. The existing connector remains an optional, verified fallback. The hosted foundation is implemented behind `SRM_TRACKER_ACQUISITION_ENABLED=false` by default.
+
+The next implementation gate is evidence, not a guessed adapter: complete the bounded Student Portal HTTP, SCOPE equivalence, and hosted-browser experiments from the redesign brief; select one provider; then implement only that provider. Do not store SRM passwords, cookies, profiles, raw responses, CAPTCHA answers, OTPs, or browser fingerprint values. Do not claim hourly hosted refresh or Android reauthentication until the seven-day staging pilot proves it.
+
 ## Milestone 0 — Repository control plane
 
 **Deliverable:** A safe Git baseline, architecture record, status handoff, and complete implementation map.

@@ -29,6 +29,7 @@ def test_production_login_sets_secure_http_only_session_cookie(
         environment="production",
         database_url="postgresql+psycopg://srm_tracker:srm_tracker@localhost:55432/srm_tracker_test",
         frontend_origin="https://dashboard.example",
+        session_encryption_key="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     )
     app_client.app = create_app(  # type: ignore[union-attr]
         settings=production_settings,
@@ -54,6 +55,7 @@ def test_production_redirects_http_requests_to_https(
         environment="production",
         database_url="postgresql+psycopg://srm_tracker:srm_tracker@localhost:55432/srm_tracker_test",
         frontend_origin="https://dashboard.example",
+        session_encryption_key="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     )
     app_client.app = create_app(  # type: ignore[union-attr]
         settings=production_settings,

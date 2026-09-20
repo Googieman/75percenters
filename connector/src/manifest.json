@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "SRM Attendance Tracker Connector",
+  "version": "0.1.0",
+  "description": "User-triggered attendance collection from the authenticated SRM tab.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://sp.srmist.edu.in/srmiststudentportal/*",
+    "__SRM_TRACKER_API_ORIGIN__/*"
+  ],
+  "action": {
+    "default_title": "SRM Attendance Tracker",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "worker.mjs",
+    "type": "module"
+  }
+}

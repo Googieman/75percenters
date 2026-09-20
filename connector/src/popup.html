@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SRM Attendance Tracker</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Attendance Tracker</h1>
+      <p id="status" data-testid="connector-status">Checking connector status…</p>
+      <section id="pairing" hidden>
+        <label for="pairing-code">Pairing code</label>
+        <input id="pairing-code" data-testid="pairing-code" autocomplete="off" />
+        <button id="pair" data-testid="pair-button" type="button">Pair</button>
+      </section>
+      <button id="sync" data-testid="sync-button" type="button" disabled>Sync attendance</button>
+      <p id="message" data-testid="message" role="status"></p>
+    </main>
+    <script type="module" src="popup.mjs"></script>
+  </body>
+</html>

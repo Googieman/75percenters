@@ -5,6 +5,7 @@ from srm_tracker.attendance_service import process_upload
 from srm_tracker.db_models import AttendanceSnapshot, ConnectorDevice
 from srm_tracker.schemas import AttendanceUpload, SubjectUpload
 from srm_tracker.security import hash_opaque_token
+from srm_tracker.time import utc_now
 
 RECORDS = [
     {
@@ -77,6 +78,22 @@ def test_first_upload_is_persisted_and_reads_include_guidance(
     assert body["subjects"][0]["guidance"]["additional_attended_hours"] == 5
     assert body["last_successful_sync"]
     assert csrf
+
+
+def test_attendance_freshness_is_source_independent(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        user = bootstrap_account(session, "owner@example.com", "a-very-long-password")
+        user.last_successful_sync_at = utc_now()
+        session.commit()
+    _login(app_client)
+
+    response = app_client.request("GET", "/api/v1/attendance")  # type: ignore[union-attr]
+
+    assert response.status_code == 200
+    assert response.json()["last_successful_sync"]
 
 
 def test_unchanged_retry_updates_last_seen_without_new_snapshot(

@@ -42,6 +42,20 @@ $env:SRM_TRACKER_TEST_DATABASE_URL = "postgresql+psycopg://srm_tracker:srm_track
 
 The migration test explicitly upgrades from empty, downgrades to `base`, and upgrades again. Stop the disposable service with `docker compose stop postgres-test` when finished.
 
+## Phone-first hosted foundation
+
+The server exposes safe connection status, durable refresh queueing, owned sync-job reads, disconnect, authentication attempts, and Web Push subscription endpoints under `/api/v1`. A separate worker claims PostgreSQL-backed jobs with leases and fencing generations, schedules connected accounts hourly, and dispatches VAPID notices. The fixed CampusWeb Student Portal adapter uses only the observed Student Portal routes and remains disabled by default with `SRM_TRACKER_ACQUISITION_ENABLED=false` until the evidence gates in `docs/PHONE_FIRST_ACQUISITION.md` pass.
+
+Production must provide `SRM_TRACKER_SESSION_ENCRYPTION_KEY` as a separately managed URL-safe base64 key containing 32 bytes. Optional retained read keys are supplied as a JSON object in `SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS`, for example `{"1":"<base64-key>"}`. Run `python scripts/rotate_session_keys.py` repeatedly until it prints `0` before retiring an old key. Keys encrypt provider session/challenge state with AES-GCM and are never stored in PostgreSQL.
+
+Start the hosted worker separately from the API after migrations:
+
+```powershell
+.\.venv\Scripts\python.exe -m srm_tracker.worker_entrypoint
+```
+
+The Render Blueprint at `../render.yaml` defines separate API and worker processes plus PostgreSQL. It contains no production secrets. Set the same active/read encryption keys and VAPID settings on both processes; keep acquisition disabled until the manual CampusWeb checkpoint and pilot are complete.
+
 ## API security model
 
 - Browser login creates a seven-day opaque HTTP-only session cookie and returns a session-bound CSRF token. Browser writes send that token in `X-CSRF-Token`.
@@ -49,5 +63,6 @@ The migration test explicitly upgrades from empty, downgrades to `base`, and upg
 - Connector tokens can only upload structured attendance records. They cannot read attendance, change settings, list devices, or revoke devices.
 - Attendance uploads validate every subject before a transaction writes anything. Subject totals are snapshotted only when totals change; omitted existing subjects remain.
 - Production requires an HTTPS configured frontend origin and marks session/CSRF cookies as `Secure`. CORS allows only the exact configured origin.
+- Hosted SRM session material is owner/provider/generation-bound authenticated ciphertext. Disconnect removes active state and invalidates queued work while preserving attendance history.
 
-The dashboard, Chrome extension, live SRM requests, and deployment are later milestones. Do not run the retained legacy `scraper.py`.
+The concrete hosted provider and deployment remain gated milestones. Do not run the retained legacy `scraper.py`.
