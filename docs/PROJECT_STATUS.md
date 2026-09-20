@@ -66,7 +66,7 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 | Initial repository inspection | Completed | No existing test suite or application manifests were found. |
 | Legacy dependency inspection | Completed | Local virtual environment contains Playwright 1.62.0 and Beautiful Soup 4.15.0. |
 | Baseline automated tests | Not available | No test files or test runner configuration existed at inspection time. |
-| Backend tests | Passed | 44 passed against disposable PostgreSQL: baseline domain/health behavior, migrations, bootstrap/auth, CSRF/CORS/rate limits, pairing/concurrency/revocation, ingestion/history, rollback-facing validation, fixture flow, and cross-user isolation. |
+| Backend tests | Passed | 45 passed against disposable PostgreSQL: baseline domain/health behavior, migrations, bootstrap/auth, CSRF/CORS/rate limits, pairing/concurrency/revocation, ingestion/history, rollback-facing validation, fixture flow, HTTPS enforcement, and cross-user isolation. |
 | Ruff | Passed | `ruff check .` exited 0. |
 | Mypy | Passed | Strict check of 18 source files exited 0. |
 | Dependency integrity | Passed | `pip check` reported no broken requirements. |
