@@ -1,0 +1,8 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { min-width: 280px; margin: 0; padding: 16px; }
+main { display: grid; gap: 12px; }
+h1 { font-size: 1.1rem; margin: 0; }
+label { display: block; font-size: .8rem; margin-bottom: 4px; }
+input, button { box-sizing: border-box; min-height: 36px; width: 100%; }
+button { cursor: pointer; }
+#message { min-height: 1.2em; margin: 0; font-size: .8rem; }
