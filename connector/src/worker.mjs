@@ -3,10 +3,9 @@ import {
   isTrustedPopupSender,
   validateCollectorResult,
 } from "./message-policy.mjs";
+import { isAllowedPortalUrl } from "./portal-policy.mjs";
 
 const API_ORIGIN = "__SRM_TRACKER_API_ORIGIN__";
-const PORTAL_PAGE_URL =
-  "https://sp.srmist.edu.in/srmiststudentportal/students/report/studentAttendanceDetails.jsp";
 const WORKER_ERROR_CODES = Object.freeze({
   API_FAILED: "API_FAILED",
   NOT_PAIRED: "NOT_PAIRED",
@@ -71,7 +70,7 @@ async function syncAttendance() {
     return { ok: false, errorCode: WORKER_ERROR_CODES.NOT_PAIRED };
   }
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  if (tab?.id === undefined || tab.url !== PORTAL_PAGE_URL) {
+  if (tab?.id === undefined || !isAllowedPortalUrl(tab.url)) {
     return { ok: false, errorCode: WORKER_ERROR_CODES.PORTAL_TAB_INVALID };
   }
   let injected;

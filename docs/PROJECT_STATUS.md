@@ -4,7 +4,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 
 ## Current milestone
 
-**Task 6 — live connector verification** is in progress. Task 5 established the local flow; Task 6 is prepared with a separate persistent local database and a sanitized evidence record, pending normal Chrome/SRM interaction.
+**Task 6 — live connector verification** is complete for the authenticated report flow. The separate persistent local database and sanitized evidence record are retained for local development; live portal-expiry testing remains intentionally untested.
 
 ## Completed work
 
@@ -17,7 +17,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - Diagnosed a transient Windows installer file lock caused by an earlier still-running package installation. A single retry after the process exited installed the missing packages; `pip check` reported no broken requirements.
 - Removed generated editable-install `.egg-info` metadata from Git and added an ignore rule so future package setup does not pollute commits.
 - Test-drove the strict, local HTML parser with sanitized fixtures. It finds the documented six-column table by exact normalized headers and returns typed cumulative subject records.
-- Added rejection tests for login markup, missing attendance tables, fractional/invalid source hours, and inconsistent attended-plus-absent totals. No live SRM request has been made.
+- Added rejection tests for login markup, missing attendance tables, fractional/invalid source hours, and inconsistent attended-plus-absent totals. Live verification is recorded separately and contains no private portal values.
 - Test-drove target calculations for empty totals, exact/below/above target, 100% edge cases, invalid targets, and two-decimal display rounding. Guidance uses unrounded totals for decisions: 16 attended out of 23 needs 5 attended hours to reach 75% and displays 69.57%.
 - Added the FastAPI application factory and a versioned, database-free `GET /api/v1/health` endpoint. Its HTTP behavior is tested with HTTPX’s ASGI transport, avoiding deprecated test-wrapper warnings.
 - Added PostgreSQL/Alembic persistence for users, sessions, subjects, snapshots, pairing codes, connector devices, and database-backed rate-limit buckets, with a local Compose service and a tested upgrade/downgrade/re-upgrade migration.
@@ -26,7 +26,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - Added the packaged Manifest V3 connector with `activeTab`, user-triggered main-world collection, strict response validation, stable collector error codes, exact popup-message provenance checks, pairing, revocation handling, and duplicate-sync protection.
 - Added `scripts/run_local_e2e.ps1` and `npm run test:e2e`. Each run creates a uniquely named loopback-only PostgreSQL 16 container with temporary storage, applies migrations, bootstraps a synthetic account, starts real API/PWA processes, builds the connector into a run-owned directory, and tears down only its own resources.
 - Test-drove collector regressions for both `Att. hours` and `Attended hours`, body-read timeout coverage, ambiguous controls, frame and navigation changes, malformed results, exact popup URLs, and upload payloads containing only structured subjects.
-- Prepared the Task 6 live-verification record at `docs/live-verification.md` and a dedicated persistent PostgreSQL 16 container on loopback port 5433. The database is migrated but has no tracker account yet.
+- Completed the Task 6 live-verification record at `docs/live-verification.md` using a dedicated persistent PostgreSQL 16 container on loopback port 55433. The normal Chrome report flow, structured upload, dashboard refresh, unchanged repeat, and same-origin non-report rejection all passed.
 
 ## Architecture decisions
 
@@ -34,15 +34,14 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - A Chrome Manifest V3 extension performs a user-triggered, packaged main-world request while the user is logged in normally to SRM. It sends only validated subject totals to the API.
 - Pairing uses a short-lived code exchanged for a revocable, device-scoped ingestion credential. No SRM password, cookie, browser profile, token, or raw HTML is stored or sent to the API.
 - `scraper.py` is retained locally as an inspected legacy reference only and intentionally excluded from Git. It will not be run, extended, or used in the production path.
-- The observed request fields (`iden`, `filter`, `hdnFormDetails`, and optionally `csrfPreventionSalt`) are documented as user-reported network observations, not as directly inspected DOM facts. The collector reads only unique named controls from the verified top-level form; the precise DOM source of the CSRF field remains unverified.
+- The live report is displayed at `HRDSystem.jsp` while attendance is fetched from the verified POST endpoint `studentAttendanceDetails.jsp`. The current top-level form uses `hdnFormDetails` and the observed hidden request controls, with a unique hidden `csrfPreventionSalt`; the collector also requires the visible six-column attendance header so same-origin portal pages fail closed.
 - The local response contract accepts the observed `Att. hours` spelling and the earlier `Attended hours` spelling. Passing local fixtures establish integration behavior only; they do not establish live SRM compatibility.
 
 ## Remaining milestones
 
 1. Expand the PWA with offline cached-data labeling and the remaining production-facing dashboard polish.
-2. Task 6: perform the one live portal verification in normal Chrome while already logged into SRM, then record the confirmed live DOM/request details in `docs/live-verification.md`.
-3. Complete production checks, Render Blueprint, and secure environment configuration.
-4. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
+2. Complete production checks, Render Blueprint, and secure environment configuration.
+3. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
 
 ## Exact commands to resume
 
@@ -125,5 +124,5 @@ Not started. No Render resources, paid plans, GitHub remote, live URL, or produc
 ## Blockers and manual verification
 
 - The successful attendance HTML fixture is locally authored and sanitized to reflect the confirmed six-column contract; a real response must never be committed.
-- Live SRM syncing is prepared but intentionally unverified. Task 6 must use normal Chrome with the user completing SRM login/CAPTCHA themselves: create the local tracker account, build the connector for the local API origin, pair it from the PWA, open the attendance report, press the actual toolbar popup's **Sync**, and confirm the dashboard receives the reported totals. Do not use the legacy scraper or a Playwright-launched SRM login.
+- Live SRM syncing is verified for the normal authenticated Chrome flow. The user completed SRM login/CAPTCHA themselves; the connector was paired from the PWA, the actual Chrome Extensions toolbar popup collected from the report, the dashboard/history persisted the structured result, and an unchanged repeat remained idempotent. Same-origin non-report pages now fail closed. Do not use the legacy scraper or a Playwright-launched SRM login.
 - Production deployment will require Render account authorization, a durable PostgreSQL plan approved by the user, secure secret entry, and (if not already connected) source-host authorization.

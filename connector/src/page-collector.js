@@ -11,7 +11,17 @@ globalThis.__srmTrackerCollectAttendance = async () => {
   };
   const endpoint =
     "https://sp.srmist.edu.in/srmiststudentportal/students/report/studentAttendanceDetails.jsp";
-  const requiredFields = ["iden", "filter", "hdnFormDetails"];
+  const requiredField = "hdnFormDetails";
+  const supportedFields = [
+    "iden",
+    "filter",
+    "hidchkHostelOpen",
+    "hdnFormStatus",
+    "hdnFormId",
+    "hdnFormDetails",
+    "hdnFilename",
+    "csrfPreventionSalt",
+  ];
 
   const fail = (errorCode) => ({ ok: false, errorCode });
   const normalize = (value) => value.replace(/\s+/g, " ").trim();
@@ -91,22 +101,22 @@ globalThis.__srmTrackerCollectAttendance = async () => {
   if (window.top !== window.self) return fail(CODES.WRONG_FRAME);
   const startUrl = window.location.href;
   const forms = [...document.forms].filter((form) =>
-    requiredFields.every((name) => form.elements.namedItem(name)),
+    [...form.elements].filter((control) => control.name === requiredField).length > 0,
   );
   if (forms.length !== 1) {
     return fail(forms.length > 1 ? CODES.AMBIGUOUS_FORM : CODES.CONTEXT_INVALID);
   }
+  if (!hasAttendanceTable(document)) return fail(CODES.CONTEXT_INVALID);
+
   const form = forms[0];
-  const controls = (name) => [...form.elements].filter((control) => control.name === name);
   const data = new URLSearchParams();
-  for (const name of requiredFields) {
+  for (const name of supportedFields) {
     const matches = controls(name);
-    if (matches.length !== 1) return fail(CODES.AMBIGUOUS_FORM);
-    data.set(name, matches[0].value || "");
+    if (matches.length > 1) return fail(CODES.AMBIGUOUS_FORM);
+    if (matches.length === 1 && isSuccessfulControl(matches[0])) {
+      data.set(name, matches[0].value || "");
+    }
   }
-  const csrf = controls("csrfPreventionSalt");
-  if (csrf.length > 1) return fail(CODES.AMBIGUOUS_FORM);
-  if (csrf.length === 1) data.set("csrfPreventionSalt", csrf[0].value || "");
 
   const controller = new AbortController();
   let timer;
@@ -139,5 +149,37 @@ globalThis.__srmTrackerCollectAttendance = async () => {
     return fail(CODES.REQUEST_FAILED);
   } finally {
     if (timer) clearTimeout(timer);
+  }
+
+  function controls(name) {
+    return [...form.elements].filter((control) => control.name === name);
+  }
+
+  function isSuccessfulControl(control) {
+    if (control.disabled) return false;
+    if (["button", "file", "reset", "submit"].includes(control.type)) return false;
+    if (["checkbox", "radio"].includes(control.type) && !control.checked) return false;
+    return true;
+  }
+
+  function hasAttendanceTable(pageDocument) {
+    const expected = [
+      ["code"],
+      ["description"],
+      ["max. hours"],
+      ["attended hours", "att. hours"],
+      ["absent hours"],
+      ["total percentage"],
+    ];
+    return [...pageDocument.querySelectorAll("table")].some((table) =>
+      [...table.querySelectorAll("tr")].some((row) => {
+        const headers = [...row.children].filter((cell) => ["TH", "TD"].includes(cell.tagName));
+        const values = headers.map((cell) => normalizeHeader(cell.textContent || ""));
+        return (
+          values.length === expected.length &&
+          values.every((value, index) => expected[index].includes(value))
+        );
+      }),
+    );
   }
 };

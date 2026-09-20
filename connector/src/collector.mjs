@@ -13,7 +13,17 @@ export const COLLECTOR_ERROR_CODES = Object.freeze({
   WRONG_FRAME: "WRONG_FRAME",
 });
 
-const REQUIRED_FORM_FIELDS = ["iden", "filter", "hdnFormDetails"];
+const REQUIRED_FORM_FIELD = "hdnFormDetails";
+const SUPPORTED_FORM_FIELDS = [
+  "iden",
+  "filter",
+  "hidchkHostelOpen",
+  "hdnFormStatus",
+  "hdnFormId",
+  "hdnFormDetails",
+  "hdnFilename",
+  "csrfPreventionSalt",
+];
 const HEADER_VARIANTS = {
   code: new Set(["code"]),
   subject: new Set(["description"]),
@@ -71,7 +81,7 @@ export async function collectAttendance({
 
   const startUrl = locationHref();
   const forms = [...document.forms].filter((form) =>
-    REQUIRED_FORM_FIELDS.every((name) => form.elements.namedItem(name)),
+    namedControls(form, REQUIRED_FORM_FIELD).length > 0,
   );
   if (forms.length !== 1) {
     return failure(
@@ -80,18 +90,17 @@ export async function collectAttendance({
         : COLLECTOR_ERROR_CODES.CONTEXT_INVALID,
     );
   }
+  if (!hasAttendanceTable(document)) return failure(COLLECTOR_ERROR_CODES.CONTEXT_INVALID);
 
   const form = forms[0];
   const formData = new URLSearchParams();
-  for (const name of REQUIRED_FORM_FIELDS) {
+  for (const name of SUPPORTED_FORM_FIELDS) {
     const controls = namedControls(form, name);
-    if (controls.length !== 1) return failure(COLLECTOR_ERROR_CODES.AMBIGUOUS_FORM);
-    formData.set(name, controls[0].value || "");
+    if (controls.length > 1) return failure(COLLECTOR_ERROR_CODES.AMBIGUOUS_FORM);
+    if (controls.length === 1 && isSuccessfulControl(controls[0])) {
+      formData.set(name, controls[0].value || "");
+    }
   }
-
-  const csrfControls = namedControls(form, "csrfPreventionSalt");
-  if (csrfControls.length > 1) return failure(COLLECTOR_ERROR_CODES.AMBIGUOUS_FORM);
-  if (csrfControls.length === 1) formData.set("csrfPreventionSalt", csrfControls[0].value || "");
 
   const controller = new AbortController();
   let timer;
@@ -137,9 +146,25 @@ function namedControls(form, name) {
   return [...form.elements].filter((control) => control.name === name);
 }
 
+function isSuccessfulControl(control) {
+  if (control.disabled) return false;
+  if (["button", "file", "reset", "submit"].includes(control.type)) return false;
+  if (["checkbox", "radio"].includes(control.type) && !control.checked) return false;
+  return true;
+}
+
 function matchesHeaders(headers) {
   const fields = Object.values(HEADER_VARIANTS);
   return headers.length === fields.length && headers.every((header, index) => fields[index].has(header));
+}
+
+function hasAttendanceTable(document) {
+  return [...document.querySelectorAll("table")].some((table) =>
+    [...table.querySelectorAll("tr")].some((row) => {
+      const headers = [...row.children].filter((cell) => ["TH", "TD"].includes(cell.tagName));
+      return matchesHeaders(headers.map((cell) => normalizeHeader(cell.textContent || "")));
+    }),
+  );
 }
 
 function parseRecord(cells) {

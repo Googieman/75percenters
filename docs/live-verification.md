@@ -1,6 +1,6 @@
 # Task 6 — Live Verification Record
 
-Status: prepared; live SRM verification has not been performed.
+Status: verified with focused live fixes; live SRM portal expiry remains intentionally untested.
 
 This record contains structural observations and pass/fail outcomes only. It must never contain SRM passwords, tracker passwords, pairing codes, bearer tokens, cookies, CSRF values, raw authenticated HTML, HAR files, student identifiers, or personal attendance totals.
 
@@ -8,8 +8,8 @@ This record contains structural observations and pass/fail outcomes only. It mus
 
 - Repository branch: `codex/verify-local-attendance-flow`
 - Preparation commit: `1565548` (`test: verify local connector to dashboard flow`)
-- Verification date: not yet performed
-- Chrome version: not yet recorded
+- Verification date: 2026-09-20 (Asia/Kolkata)
+- Chrome version: not captured from the UI
 - Connector version: `0.1.0`
 
 ## Local services
@@ -19,7 +19,7 @@ The live-verification database is separate from the disposable test database:
 - Container: `srm-tracker-live-postgres`
 - Image: `postgres:16`
 - Database: `srm_tracker`
-- Loopback binding: `127.0.0.1:5433` → container port `5432`
+- Loopback binding: `127.0.0.1:55433` → container port `5432`
 - Persistent volume: `srm-tracker-live-postgres-data`
 - Migration state: `head`
 - Runtime settings: ignored `backend/.env`
@@ -33,36 +33,38 @@ The database container is user data. Stop it when the local verification session
 
 The automated browser suite loaded the packaged popup at its `chrome-extension://` URL. That exercised the real MV3 popup, service worker, `scripting.executeScript`, main-world collector, and upload path. It did not prove that a toolbar click alone supplies the intended `activeTab` boundary. The live run must use the actual Chrome toolbar icon and record that separately.
 
+Focused live fixes: the worker now permits the verified SRM shell URL and the collector uses the current hidden-form contract, while requiring the visible attendance table before any portal request. Same-origin non-report pages therefore fail closed.
+
 ## Live portal contract
 
 Record descriptions only; do not copy values or private identifiers.
 
 | Observation | Result | Sanitized notes |
 | --- | --- | --- |
-| Report visible URL | Pending |  |
-| Attendance POST endpoint | Pending |  |
-| Request method | Pending |  |
-| Top-level or framed report | Pending |  |
-| Required form controls | Pending | Names only, no values |
-| CSRF field provenance | Pending | Presence/source only, no value |
-| Attendance table headings | Pending | Header text only |
-| Login/expiry response | Pending | Shape/status only |
+| Report visible URL | Pass | `/srmiststudentportal/students/template/HRDSystem.jsp` |
+| Attendance POST endpoint | Pass | `/srmiststudentportal/students/report/studentAttendanceDetails.jsp` |
+| Request method | Pass | `POST`; confirmed by the known portal contract and successful live collection |
+| Top-level or framed report | Pass | Top-level document; no frames observed |
+| Required form controls | Pass | Current form uses `hdnFormDetails` plus the observed hidden request controls; legacy `iden`/`filter` are absent |
+| CSRF field provenance | Pass | `csrfPreventionSalt` is a unique hidden control; its value was never recorded |
+| Attendance table headings | Pass | `Code`, `Description`, `Max. hours`, `Att. hours`, `Absent hours`, `Total Percentage` |
+| Login/expiry response | Intentionally untested live | Synthetic login-response coverage remains in the connector tests |
 
 ## Live flow evidence
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| Extension loaded from built package | Pending |  |
-| Toolbar icon opened the real popup | Pending |  |
-| Pairing completed | Pending | No code/token recorded |
-| Installation/status caused no attendance upload | Pending |  |
-| One explicit Sync succeeded | Pending |  |
-| API body contained only structured subject records | Pending | Pass/fail only |
-| Dashboard matched the visible report | Pending | No totals recorded here |
-| History was created | Pending |  |
-| Unchanged Sync advanced timestamp without new snapshot | Pending |  |
-| Sync from unrelated tab was rejected | Pending |  |
-| Portal expiry behavior | Pending or intentionally untested |  |
+| Extension loaded from built package | Pass | Unpacked `connector/dist`, enabled, version `0.1.0` |
+| Toolbar icon opened the real popup | Pass | Chrome Extensions toolbar menu opened the real popup |
+| Pairing completed | Pass | No code/token recorded |
+| Installation/status caused no attendance upload | Pass | Initial live database had zero subjects and zero snapshots |
+| One explicit Sync succeeded | Pass | Popup reported `Attendance synced.` |
+| API body contained only structured subject records | Pass | Worker/API contract and persisted structured tables; no raw portal response path |
+| Dashboard matched the visible report | Pass | Reloaded dashboard populated all five reported subjects; private totals omitted here |
+| History was created | Pass | Initial live snapshot persisted |
+| Unchanged Sync advanced timestamp without new snapshot | Pass | Repeat popup sync succeeded; subject and snapshot counts remained `5` and `5` |
+| Sync from unrelated tab was rejected | Pass | Same-origin SRM dashboard returned the context error with no database count change |
+| Portal expiry behavior | Intentionally untested | Would require logging out through the portal; synthetic expiry coverage remains |
 
 ## Commands
 
@@ -75,7 +77,7 @@ docker start srm-tracker-live-postgres
 From `backend`, apply migrations and create the first tracker account if the database has no account. Enter the tracker password interactively; do not place it in this document:
 
 ```powershell
-$env:SRM_TRACKER_DATABASE_URL = "postgresql+psycopg://srm_tracker:srm_tracker@127.0.0.1:5433/srm_tracker"
+$env:SRM_TRACKER_DATABASE_URL = "postgresql+psycopg://srm_tracker:srm_tracker@127.0.0.1:55433/srm_tracker"
 $python = "C:\Users\varug\Attendance-extractor\backend\.venv\Scripts\python.exe"
 & $python -m alembic upgrade head
 & $python -m srm_tracker.admin bootstrap
@@ -112,6 +114,6 @@ docker stop srm-tracker-live-postgres
 
 ## Remaining uncertainties
 
-- Live compatibility is unverified until normal Chrome loads the report and the user presses Sync.
-- The exact live report URL, frame context, CSRF provenance, and response heading spelling remain pending.
+- Live compatibility is verified for the authenticated report flow and same-origin non-report rejection.
+- Chrome version was not captured; live portal expiry behavior remains intentionally untested.
 - The live tracker account and attendance values are intentionally absent from this file.

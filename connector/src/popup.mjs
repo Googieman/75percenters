@@ -53,8 +53,12 @@ function showMessage(value) {
 
 function errorMessage(code) {
   const messages = {
+    AMBIGUOUS_FORM: "SRM returned more than one matching attendance form.",
+    CONTEXT_INVALID: "The active SRM page does not contain the verified attendance form.",
     LOGIN_REQUIRED: "Log into SRM in the active tab, then try again.",
+    NAVIGATION_CHANGED: "SRM changed pages during collection. Open the report and try again.",
     PORTAL_TAB_INVALID: "Open the SRM attendance report in the active tab first.",
+    REQUEST_FAILED: "SRM did not return an attendance response. Try again from the report.",
     TIMEOUT: "SRM took too long to respond. Try again.",
     REVOKED: "This connector was revoked. Pair it again from the dashboard.",
     API_FAILED: "The tracker API rejected the sync without changing saved data.",

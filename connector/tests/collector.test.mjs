@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { JSDOM } from "jsdom";
 
@@ -12,6 +13,10 @@ globalThis.DOMParser = new JSDOM().window.DOMParser;
 
 const ENDPOINT =
   "https://sp.srmist.edu.in/srmiststudentportal/students/report/studentAttendanceDetails.jsp";
+const PAGE_COLLECTOR_SOURCE = await readFile(
+  new URL("../src/page-collector.js", import.meta.url),
+  "utf8",
+);
 
 function portalPage({ csrf = "", duplicateIden = false } = {}) {
   return `<!doctype html><html><body>
@@ -22,6 +27,31 @@ function portalPage({ csrf = "", duplicateIden = false } = {}) {
       <input name="hdnFormDetails" value="1">
       <input name="csrfPreventionSalt" value="${csrf}">
     </form>
+    <table><tr>
+      <th>Code</th><th>Description</th><th>Max. hours</th><th>Att. hours</th>
+      <th>Absent hours</th><th>Total Percentage</th>
+    </tr><tr><td>FIXTURE1</td><td>Fixture Subject</td><td>10</td><td>8</td><td>2</td><td>80.00</td></tr></table>
+  </body></html>`;
+}
+
+function livePortalPage({ includeReport = true } = {}) {
+  return `<!doctype html><html><body>
+    <form method="post" action="/srmiststudentportal/students/template/HRDSystem.jsp">
+      <input type="hidden" name="hidchkHostelOpen" value="0">
+      <input type="hidden" name="hdnFormStatus" value="active">
+      <input type="hidden" name="hdnFormId" value="attendance">
+      <input type="hidden" name="hdnFormDetails" value="1">
+      <input type="hidden" name="hdnFilename" value="studentAttendanceDetails.jsp">
+      <input type="hidden" name="csrfPreventionSalt" value="fixture-csrf">
+    </form>
+    ${
+      includeReport
+        ? `<table><tr>
+      <th>Code</th><th>Description</th><th>Max. hours</th><th>Att. hours</th>
+      <th>Absent hours</th><th>Total Percentage</th>
+    </tr><tr><td>FIXTURE1</td><td>Fixture Subject</td><td>10</td><td>8</td><td>2</td><td>80.00</td></tr></table>`
+        : ""
+    }
   </body></html>`;
 }
 
@@ -49,6 +79,55 @@ test("accepts the documented Att. hours spelling", () => {
       source_percentage: "69.57",
     },
   ]);
+});
+
+test("collects from the current live SRM attendance form contract", async () => {
+  const page = new JSDOM(livePortalPage(), {
+    url: "https://sp.srmist.edu.in/srmiststudentportal/students/template/HRDSystem.jsp",
+    runScripts: "dangerously",
+  });
+  let request;
+  page.window.fetch = async (url, options) => {
+    request = { url, options };
+    return { ok: true, text: async () => attendanceResponse() };
+  };
+  page.window.eval(PAGE_COLLECTOR_SOURCE);
+
+  const result = await page.window.__srmTrackerCollectAttendance();
+
+  assert.equal(result.ok, true);
+  assert.equal(request.url, ENDPOINT);
+  assert.equal(request.options.method, "POST");
+  assert.deepEqual(
+    [...new URLSearchParams(request.options.body).keys()],
+    [
+      "hidchkHostelOpen",
+      "hdnFormStatus",
+      "hdnFormId",
+      "hdnFormDetails",
+      "hdnFilename",
+      "csrfPreventionSalt",
+    ],
+  );
+});
+
+test("rejects the same-origin portal shell when the attendance report is absent", async () => {
+  const page = new JSDOM(livePortalPage({ includeReport: false }), {
+    url: "https://sp.srmist.edu.in/srmiststudentportal/students/template/HRDSystem.jsp",
+    runScripts: "dangerously",
+  });
+  let requestStarted = false;
+  page.window.fetch = async () => {
+    requestStarted = true;
+    return { ok: true, text: async () => attendanceResponse() };
+  };
+  page.window.eval(PAGE_COLLECTOR_SOURCE);
+
+  const result = await page.window.__srmTrackerCollectAttendance();
+
+  assert.equal(result.ok, false);
+  assert.equal(result.errorCode, "CONTEXT_INVALID");
+  assert.equal(requestStarted, false);
 });
 
 test("keeps the 30-second timeout active while reading the response body", async () => {

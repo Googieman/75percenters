@@ -194,7 +194,10 @@ async function portalRoute(route: Route) {
 function portalPageHtml() {
   return `<!doctype html><html><body><form id="attendance-form">
     <input name="iden" value="9"><input name="filter" value=""><input name="hdnFormDetails" value="1"><input name="csrfPreventionSalt" value="synthetic-csrf">
-  </form></body></html>`;
+  </form><table><tr>
+    <th>Code</th><th>Description</th><th>Max. hours</th><th>Att. hours</th>
+    <th>Absent hours</th><th>Total Percentage</th>
+  </tr><tr><td>FIXTURE1</td><td>Fixture Subject</td><td>10</td><td>8</td><td>2</td><td>80.00</td></tr></table></body></html>`;
 }
 
 function attendanceHtml(records: Array<[string, string, number, number, number, string]>) {

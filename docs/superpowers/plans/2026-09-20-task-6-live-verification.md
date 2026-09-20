@@ -31,51 +31,51 @@
 
 **Files:** Read `backend/README.md`, `backend/src/srm_tracker/admin.py`, `backend/src/srm_tracker/config.py`, `docker-compose.yml`, `frontend/vite.config.ts`, `connector/scripts/build.mjs`, `connector/src/manifest.json`. Record sanitized setup in `docs/live-verification.md`.
 
-- [ ] Read current status and plan; inspect Git changes and confirm `1565548` is present. Preserve unrelated changes.
-- [ ] Audit Task 5 evidence before relying on it. The E2E opens `popup.html` directly; the manifest also grants portal host access, so the previous claim that activeTab was proved is too strong. Record this limitation and inspect actual permission needs. Do not treat manual testing as retroactive satisfaction of the original automated-action requirement.
-- [ ] Inspect existing local database resources before starting anything. Use a dedicated, named PostgreSQL 16 database/container with persistent storage and an explicit loopback binding for personal attendance. Record its exact identity and connection configuration in ignored local settings. Do not use the disposable E2E runner for this database.
-- [ ] Configure backend frontend origin as `http://127.0.0.1:5173`, frontend API proxy as `http://127.0.0.1:8000`, and connector API origin as `http://127.0.0.1:8000`; if ports are occupied, choose and record a consistent alternative.
-- [ ] Install missing locked dependencies, apply `python -m alembic upgrade head` from `backend`, and verify database connectivity. Bootstrap the tracker account with `python -m srm_tracker.admin bootstrap` only if no account exists. The user enters a distinct tracker password in the hidden prompt.
-- [ ] Start API and frontend bound to loopback. Verify API health, tracker sign-in, empty/existing dashboard state, and pairing-code generation. Keep live-verification services available through the manual test.
-- [ ] From `connector`, run `npm run build -- http://127.0.0.1:8000`. Inspect the built manifest and worker for the exact configured API origin and no unexpected hosts.
-- [ ] In normal Chrome, load the built `connector/dist` directory through Extensions → Developer mode → Load unpacked. Pin its toolbar icon. Pair using a freshly generated tracker code; record only success, never the code or credential.
+- [x] Read current status and plan; inspect Git changes and confirm `1565548` is present. Preserve unrelated changes.
+- [x] Audit Task 5 evidence before relying on it. The E2E opens `popup.html` directly; the manifest also grants portal host access, so the previous claim that activeTab was proved is too strong. Record this limitation and inspect actual permission needs. Do not treat manual testing as retroactive satisfaction of the original automated-action requirement.
+- [x] Inspect existing local database resources before starting anything. Use a dedicated, named PostgreSQL 16 database/container with persistent storage and an explicit loopback binding for personal attendance. Record its exact identity and connection configuration in ignored local settings. Do not use the disposable E2E runner for this database.
+- [x] Configure backend frontend origin as `http://127.0.0.1:5173`, frontend API proxy as `http://127.0.0.1:8000`, and connector API origin as `http://127.0.0.1:8000`; if ports are occupied, choose and record a consistent alternative.
+- [x] Install missing locked dependencies, apply `python -m alembic upgrade head` from `backend`, and verify database connectivity. Bootstrap the tracker account with `python -m srm_tracker.admin bootstrap` only if no account exists. The user enters a distinct tracker password in the hidden prompt.
+- [x] Start API and frontend bound to loopback. Verify API health, tracker sign-in, empty/existing dashboard state, and pairing-code generation. Keep live-verification services available through the manual test.
+- [x] From `connector`, run `npm run build -- http://127.0.0.1:8000`. Inspect the built manifest and worker for the exact configured API origin and no unexpected hosts.
+- [x] In normal Chrome, load the built `connector/dist` directory through Extensions → Developer mode → Load unpacked. Pin its toolbar icon. Pair using a freshly generated tracker code; record only success, never the code or credential.
 
 ## Task 2: Establish the real portal contract and make focused fixes
 
 **Files:** Inspect `connector/src/worker.mjs`, `connector/src/collector.mjs`, `connector/src/page-collector.js`, `connector/src/message-policy.mjs`; if necessary modify these and their tests. Create sanitized structural fixtures under `connector/tests/fixtures/`. Document evidence in `docs/live-verification.md`.
 
-- [ ] The user logs into SRM normally, completes CAPTCHA, and opens attendance through normal portal navigation. Do not navigate directly to the POST endpoint as a substitute for opening the report.
-- [ ] Inspect only the attendance-related structure: top-level URL, frame nesting, the report form, named control uniqueness, table headings, and response shape. Record structural descriptions; omit student identifiers, secrets, values of CSRF/session fields, and private URL parameters.
-- [ ] Confirm the legitimate attendance request method/endpoint and field names from a normal user-triggered report request. Inspect CSRF provenance locally without copying its value. No full page dumps or network exports.
-- [ ] Compare observations to the worker's exact URL check, which currently assumes the visible page equals `studentAttendanceDetails.jsp`, and to its top-level form assumptions. This is an unresolved assumption, not a verified live contract.
-- [ ] If a mismatch exists, pause live sync and implement the smallest supported connector fix. For nested-frame or different-origin designs that materially change the security boundary, document the issue and resolve the design before enabling collection.
-- [ ] Build synthetic fixtures from the observed structure using invented subject data and token placeholders. Add a failing regression for each actual mismatch before fixing it. Test the code that is actually injected; avoid covering only the parallel Node parser implementation.
-- [ ] Run connector tests and packaging checks after connector changes. Run the synthetic E2E after changing the collection/upload path; update its synthetic portal structure to match the verified contract without any live data. Keep failure conditions fail-closed.
-- [ ] Rebuild and reload the unpacked extension. Re-pair only if storage or extension identity changed.
+- [x] The user logs into SRM normally, completes CAPTCHA, and opens attendance through normal portal navigation. Do not navigate directly to the POST endpoint as a substitute for opening the report.
+- [x] Inspect only the attendance-related structure: top-level URL, frame nesting, the report form, named control uniqueness, table headings, and response shape. Record structural descriptions; omit student identifiers, secrets, values of CSRF/session fields, and private URL parameters.
+- [x] Confirm the legitimate attendance request method/endpoint and field names from a normal user-triggered report request. Inspect CSRF provenance locally without copying its value. No full page dumps or network exports.
+- [x] Compare observations to the worker's exact URL check, which currently assumes the visible page equals `studentAttendanceDetails.jsp`, and to its top-level form assumptions. This is an unresolved assumption, not a verified live contract.
+- [x] If a mismatch exists, pause live sync and implement the smallest supported connector fix. For nested-frame or different-origin designs that materially change the security boundary, document the issue and resolve the design before enabling collection.
+- [x] Build synthetic fixtures from the observed structure using invented subject data and token placeholders. Add a failing regression for each actual mismatch before fixing it. Test the code that is actually injected; avoid covering only the parallel Node parser implementation.
+- [x] Run connector tests and packaging checks after connector changes. Run the synthetic E2E after changing the collection/upload path; update its synthetic portal structure to match the verified contract without any live data. Keep failure conditions fail-closed.
+- [x] Rebuild and reload the unpacked extension. Re-pair only if storage or extension identity changed.
 
 ## Task 3: Verify the real toolbar-to-dashboard flow
 
 **Files:** Record sanitized outcomes in `docs/live-verification.md`; inspect attendance through existing authenticated reads and read-only database queries. Do not reuse the destructive disposable-database test helper on this database.
 
-- [ ] Establish initial subject/snapshot counts and last successful sync. Observe that extension installation, popup status, and pairing cause no connector attendance POST; distinguish these from requests the portal itself makes while displaying its report.
-- [ ] With the authenticated attendance tab active, the user clicks the actual Chrome toolbar icon and presses Sync once. Observe popup result, collector outcome, API status, and committed counts without logging credentials or raw bodies.
-- [ ] Check the outgoing API body locally for only the allowed structured subject fields. Confirm no portal cookie, CSRF marker, raw HTML, or student/session metadata is included. Record a pass/fail statement, not the payload.
-- [ ] Reload the PWA. Compare every current subject's code and cumulative totals with the visible portal report. Verify overall calculations, last-sync update, and initial history. Keep individual personal totals out of committed verification notes.
-- [ ] Perform one explicit unchanged Sync. Verify the successful-sync timestamp advances while snapshot counts remain unchanged. If portal data changed naturally, account for that change and do not falsely label it an idempotency failure.
-- [ ] Switch to an unrelated tab and press Sync: expect a clear rejection, no connector attendance request, and no database writes.
-- [ ] Verify an unauthenticated portal result if the user is ready to log out through normal portal controls. Otherwise retain synthetic expiry coverage and explicitly mark live expiry untested; do not delete cookies or force logout to manufacture the test.
-- [ ] If a live attempt fails, classify the fixed error code and inspect the relevant contract only. Stop repeated live retries until a concrete cause has been fixed and checked offline. Do not fabricate portal totals to test correction cases live.
+- [x] Establish initial subject/snapshot counts and last successful sync. Observe that extension installation, popup status, and pairing cause no connector attendance POST; distinguish these from requests the portal itself makes while displaying its report.
+- [x] With the authenticated attendance tab active, the user clicks the actual Chrome toolbar icon and presses Sync once. Observe popup result, collector outcome, API status, and committed counts without logging credentials or raw bodies.
+- [x] Check the outgoing API body locally for only the allowed structured subject fields. Confirm no portal cookie, CSRF marker, raw HTML, or student/session metadata is included. Record a pass/fail statement, not the payload.
+- [x] Reload the PWA. Compare every current subject's code and cumulative totals with the visible portal report. Verify overall calculations, last-sync update, and initial history. Keep individual personal totals out of committed verification notes.
+- [x] Perform one explicit unchanged Sync. Verify the successful-sync timestamp advances while snapshot counts remain unchanged. If portal data changed naturally, account for that change and do not falsely label it an idempotency failure.
+- [x] Switch to an unrelated tab and press Sync: expect a clear rejection, no connector attendance request, and no database writes.
+- [x] Verify an unauthenticated portal result if the user is ready to log out through normal portal controls. Otherwise retain synthetic expiry coverage and explicitly mark live expiry untested; do not delete cookies or force logout to manufacture the test.
+- [x] If a live attempt fails, classify the fixed error code and inspect the relevant contract only. Stop repeated live retries until a concrete cause has been fixed and checked offline. Do not fabricate portal totals to test correction cases live.
 
 ## Task 4: Record evidence and hand off
 
 **Files:** Update `docs/PROJECT_STATUS.md`, `docs/live-verification.md`, and `backend/README.md` where setup descriptions are stale; commit any focused connector fixes and their synthetic regressions.
 
-- [ ] Record date, commit, Chrome/extension versions, local origins, structural contract findings, checks performed, and remaining uncertainties. Distinguish observed facts, user reports, and untested assumptions.
-- [ ] Correct Task 5 documentation where its automated coverage was overstated. Record manual toolbar verification separately; do not claim the direct popup test proved activeTab permission necessity.
-- [ ] Run checks proportional to the final diff: connector tests/build for connector fixes; frontend checks for UI changes; backend tests/Ruff/mypy if backend code changes; synthetic E2E for any changed integration path. Database-reset suites remain sequential and disposable.
-- [ ] Review the Git diff for sensitive data, unintended permission expansion, and unrelated edits; run `git diff --check`.
-- [ ] Commit the verified outcome as `test: verify live SRM connector flow`. If live compatibility is blocked, commit accurate findings/fixes and leave Task 6 incomplete rather than claiming success.
-- [ ] Document service stop/restart instructions and preserve the user's attendance database. Only stop resources started for this task; do not remove its persistent data.
+- [x] Record date, commit, Chrome/extension versions, local origins, structural contract findings, checks performed, and remaining uncertainties. Distinguish observed facts, user reports, and untested assumptions.
+- [x] Correct Task 5 documentation where its automated coverage was overstated. Record manual toolbar verification separately; do not claim the direct popup test proved activeTab permission necessity.
+- [x] Run checks proportional to the final diff: connector tests/build for connector fixes; frontend checks for UI changes; backend tests/Ruff/mypy if backend code changes; synthetic E2E for any changed integration path. Database-reset suites remain sequential and disposable.
+- [x] Review the Git diff for sensitive data, unintended permission expansion, and unrelated edits; run `git diff --check`.
+- [x] Commit the verified outcome as `test: verify live SRM connector flow`. If live compatibility is blocked, commit accurate findings/fixes and leave Task 6 incomplete rather than claiming success.
+- [x] Document service stop/restart instructions and preserve the user's attendance database. Only stop resources started for this task; do not remove its persistent data.
 
 ## Completion criteria
 
