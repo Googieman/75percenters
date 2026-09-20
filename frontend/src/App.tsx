@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { api, ApiError, Attendance, History, User } from "./api";
-import { formatPercentage, formatSyncTime } from "./format";
+import { formatGuidance, formatPercentage, formatSyncTime } from "./format";
 import "./styles.css";
 
 export default function App() {
@@ -122,7 +122,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
             <div><span className="eyebrow">{subject.code}</span><h2>{subject.subject}</h2></div>
             <strong className="metric">{subject.attended_hours}/{subject.total_hours}</strong>
             <p>{formatPercentage(subject.source_percentage)} · {subject.absent_hours} absent</p>
-            <p className={subject.guidance.target_reachable ? "success" : "error"}>{subject.guidance.target_reachable ? `${subject.guidance.additional_attended_hours} attended hours to target` : "Target is not reachable"}</p>
+            <p className={subject.guidance.target_reachable ? "success" : "error"}>{formatGuidance(subject.guidance)}</p>
             <button className="secondary" onClick={() => void showHistory(subject.id)} data-testid={`history-button-${subject.code}`}>View history</button>
             {history[subject.id] && <div data-testid={`history-${subject.code}`} className="history"><strong>History</strong>{history[subject.id].items.map((item) => <div key={item.id}>{item.attended_hours}/{item.total_hours} · {formatSyncTime(item.recorded_at)}</div>)}</div>}
           </article>)}
