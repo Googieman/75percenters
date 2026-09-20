@@ -13,6 +13,8 @@ dependencies = [
   "beautifulsoup4>=4.12,<5",
   "cryptography>=43,<48",
   "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "pywebpush>=2,<3",
   "pydantic-settings>=2.6,<3",
   "psycopg[binary]>=3.2,<4",
   "pwdlib[argon2]>=0.2,<1",
@@ -22,7 +24,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.27,<1",
   "mypy>=1.13,<2",
   "pytest>=8.3,<9",
   "ruff>=0.8,<1",

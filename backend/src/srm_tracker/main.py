@@ -9,6 +9,7 @@ from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from srm_tracker.attendance_api import router as attendance_router
 from srm_tracker.auth import router as auth_router
+from srm_tracker.campusweb_provider import CampusWebProvider
 from srm_tracker.config import Settings, get_settings
 from srm_tracker.db import session_factory_for_engine
 from srm_tracker.pairing import router as pairing_router
@@ -19,6 +20,7 @@ def create_app(
     settings: Settings | None = None,
     session_factory: sessionmaker[DbSession] | None = None,
     engine: Engine | None = None,
+    acquisition_provider: object | None = None,
 ) -> FastAPI:
     """Create the versioned API application without exposing configuration values."""
     settings = settings or get_settings()
@@ -26,6 +28,7 @@ def create_app(
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.database_engine = engine
+    app.state.acquisition_provider = acquisition_provider or CampusWebProvider()
     if engine is not None:
         app.state.session_factory = session_factory_for_engine(engine)
 

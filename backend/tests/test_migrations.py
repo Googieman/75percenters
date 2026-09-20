@@ -28,6 +28,7 @@ def test_migrations_upgrade_downgrade_and_reupgrade() -> None:
             "sync_jobs",
             "push_subscriptions",
             "notification_outbox",
+            "notification_deliveries",
         } <= table_names
         command.downgrade(alembic_config, "base")
         assert "users" not in inspect(engine).get_table_names()

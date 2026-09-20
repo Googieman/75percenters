@@ -4,7 +4,7 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 
 ## Current milestone
 
-**Phone-first hosted acquisition foundation — provider-gated.** The existing authenticated Chrome fallback remains verified. The hosted connection boundary, encrypted server-side state, durable jobs, source-independent ingestion, push outbox, and PWA status/offline behavior are implemented. No concrete hosted provider is enabled because the Student Portal HTTP, SCOPE, and hosted-browser feasibility gates have not been completed.
+**CampusWeb phone-first acquisition — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, hourly durable worker, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
 
 ## Completed work
 
@@ -30,11 +30,14 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 - Reconciled the phone-first redesign against the verified `d40c367` baseline, preserving the existing frontend, connector, margin/required guidance, and fallback behavior.
 - Added the verified Python `Att. hours` parser alias and migration `0002_hosted_acquisition` for SRM connections, expiring auth attempts, leased/fenced sync jobs, push subscriptions, notification outbox, and source-independent sync freshness.
 - Extracted source-independent transactional ingestion with connection-generation and job-fence checks; connector uploads still require a live non-revoked connector device.
-- Added AES-GCM server-side session/challenge-state encryption with owner/provider/generation binding and production key validation. No SRM password, OTP, cookie, token, or raw portal response is persisted.
-- Added the provider protocol, durable worker orchestration, transient retry timing, lease recovery, source-change pausing, and deduplicated reauthentication notices. No provider implementation is enabled before feasibility evidence.
+- Added AES-GCM server-side session/challenge-state encryption with owner/provider/generation/attempt binding, active/read keyrings, resumable rotation, retirement checks, and production key validation. No SRM password, OTP, cookie, token, or raw portal response is persisted.
+- Added the fixed-destination CampusWeb Student Portal provider. It forwards credentials only during explicit Connect/Reconnect, excludes Academia, validates identity/semester/attendance contracts, preserves rotated cookies, bounds requests/responses, and remains behind the disabled acquisition flag.
+- Added durable worker scheduling every 30 seconds with hourly connected-account jobs, immediate post-connect refresh, coalescing, fenced success/retry/reauth/source-change handling, bounded Retry-After retries, lease recovery, and expired challenge cleanup.
+- Added per-subscription VAPID Web Push delivery with stable data-free payloads, retry handling, 404/410 removal, deduped expiry episodes, and obsolete-notice cancellation.
 - Added `/api/v1/srm/connection`, `/api/v1/srm/auth-attempts`, `/api/v1/srm/sync`, `/api/v1/srm/sync-jobs`, disconnect, and Web Push subscription routes with session/CSRF/ownership controls.
-- Added phone-first PWA connection states, explicit hosted refresh, account-scoped offline labeling, push-permission plumbing, service-worker install assets, and target-setting UI while retaining the optional legacy connector.
-- Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the concrete Student Portal/SCOPE/hosted-browser adapter remains blocked on legitimate hosted evidence rather than being guessed.
+- Added phone-first PWA connection states, explicit hosted refresh, five-second job polling, Connect/Reconnect with password clearing, no attendance/authentication browser persistence, push reconnect handling, service-worker install assets, and target-setting reload behavior while retaining the optional legacy connector.
+- Added `render.yaml` for separate API/worker/PostgreSQL services and `vercel.json` for the same-origin API rewrite. No accounts, paid resources, domains, or secrets were provisioned.
+- Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the adapter is ready for sanitized verification but not enabled by default.
 
 ## Architecture decisions
 
@@ -48,10 +51,9 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 
 ## Remaining milestones
 
-1. Complete the bounded Student Portal HTTP, SCOPE equivalence, and hosted-browser feasibility gates; select exactly one provider from sanitized evidence.
-2. Implement only that selected provider's authenticated challenge/session/attendance contract behind the existing adapter and feature flag.
-3. Deploy a staging API/worker/database and run the seven-day phone-only pilot, including session expiry and Android reconnect.
-4. Complete the Render/Vercel release configuration and provision production only after the user authorizes accounts, plans, source hosting, and secrets.
+1. Complete the authorized CampusWeb own-account and hosted-runtime checkpoint, including restart restoration, three comparisons across two teaching days, natural expiry, and recovery.
+2. Enable the adapter only in staging after the checkpoint; configure VAPID keys and run the seven-day Android pilot with the PWA closed and worker restart recovery.
+3. Provision Render/Vercel production only after the user authorizes accounts, plans, source hosting, domains, and secrets.
 
 ## Exact commands to resume
 
@@ -75,7 +77,7 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 .\.venv\Scripts\python.exe -m mypy src
 ```
 
-Current verification on the phone-first branch: 66 backend tests, Ruff, mypy, and pip check pass; 12 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass; the local browser flow passes 6 Playwright scenarios. These checks use sanitized fixtures and disposable PostgreSQL only.
+Current verification on the phone-first branch: 92 backend tests, Ruff, mypy, and pip check pass; 13 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass. These checks use sanitized fixtures and disposable PostgreSQL only.
 
 Task 5 local flow command:
 
@@ -131,11 +133,12 @@ docker compose stop postgres-test
 
 ## Deployment state
 
-Not started. No Render resources, paid plans, GitHub remote, live URL, or production secrets have been created.
+Configuration prepared but not provisioned. No Render resources, paid plans, GitHub remote, live URL, domains, or production secrets have been created.
 
 ## Blockers and manual verification
 
 - The successful attendance HTML fixture is locally authored and sanitized to reflect the confirmed six-column contract; a real response must never be committed.
 - Live SRM syncing is verified for the normal authenticated Chrome flow. The user completed SRM login/CAPTCHA themselves; the connector was paired from the PWA, the actual Chrome Extensions toolbar popup collected from the report, the dashboard/history persisted the structured result, and an unchanged repeat remained idempotent. Same-origin non-report pages now fail closed. Do not use the legacy scraper or a Playwright-launched SRM login.
-- Hosted acquisition is not yet feasible to claim: no legitimate hosted login/session-restoration/expiry evidence or SCOPE equivalence evidence is recorded. Keep the hosted feature disabled and do not enter real SRM credentials into automated tests.
+- CampusWeb hosted acquisition is not yet feasible to claim: no legitimate own-account login/session-restoration/expiry/equivalence evidence or hosted-runtime result is recorded. Keep the hosted feature disabled and do not enter real SRM credentials into automated tests or chat.
+- The seven-day Android pilot, push delivery checkpoint, and worker restart recovery have not been run.
 - Production deployment will require Render account authorization, a durable PostgreSQL plan approved by the user, secure secret entry, and (if not already connected) source-host authorization.

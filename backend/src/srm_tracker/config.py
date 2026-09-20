@@ -6,6 +6,8 @@ from typing import Literal
 from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from srm_tracker.acquisition_crypto import SessionCipher, SessionCipherError
+
 Environment = Literal["development", "test", "production"]
 
 
@@ -29,7 +31,11 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 900
     session_encryption_key: str | None = None
     session_encryption_key_version: int = 1
+    session_encryption_read_keys: str | None = None
     acquisition_enabled: bool = False
+    web_push_public_key: str | None = None
+    web_push_private_key: str | None = None
+    web_push_subject: str | None = None
     sync_poll_interval_seconds: int = 30
     sync_minimum_interval_minutes: int = 5
     sync_hourly_interval_minutes: int = 60
@@ -64,6 +70,13 @@ class Settings(BaseSettings):
     ) -> str | None:
         if info.data.get("environment") == "production" and not value:
             raise ValueError("Production requires a session encryption key")
+        if value:
+            try:
+                SessionCipher.from_base64(value)
+            except SessionCipherError as error:
+                raise ValueError(
+                    "session encryption key must be URL-safe base64 for 32 bytes"
+                ) from error
         return value
 
     @field_validator(

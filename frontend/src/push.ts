@@ -13,9 +13,9 @@ function decodeKey(value: string): ArrayBuffer {
 
 export async function requestAndRegisterPush(publicKey: string | undefined): Promise<PushRegistrationResult> {
   if (!("Notification" in window) || !("serviceWorker" in navigator)) return "unsupported";
+  if (!publicKey) return "unconfigured";
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return "denied";
-  if (!publicKey) return "unconfigured";
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,

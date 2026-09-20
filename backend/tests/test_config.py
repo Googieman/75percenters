@@ -34,6 +34,11 @@ def test_production_requires_separate_session_encryption_key() -> None:
         )
 
 
+def test_rejects_invalid_session_encryption_key_material() -> None:
+    with pytest.raises(ValidationError, match="32 bytes"):
+        Settings(session_encryption_key="not-a-session-key")
+
+
 def test_reads_prefixed_environment_through_cached_loader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

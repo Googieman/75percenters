@@ -36,10 +36,15 @@ export type History = { items: HistoryItem[]; next_cursor: string | null };
 export type Connection = {
   status: "disconnected" | "authenticating" | "connected" | "reauth_required" | "paused" | string;
   provider: string | null;
+  provider_available: boolean;
   netid_hint: string | null;
   last_authenticated_at: string | null;
   last_refreshed_at: string | null;
   last_successful_sync: string | null;
+  active_job_id: number | null;
+  next_scheduled_refresh: string | null;
+  last_error_code: string | null;
+  notifications_available: boolean;
 };
 export type SyncJob = {
   job_id: number;
@@ -49,6 +54,13 @@ export type SyncJob = {
   result_code: string | null;
   retry_at: string | null;
   completed_at: string | null;
+};
+export type AuthAttempt = {
+  attempt_id: number;
+  status: string;
+  challenge_type: string | null;
+  message: string | null;
+  expires_at: string;
 };
 
 export class ApiError extends Error {
@@ -92,6 +104,14 @@ export const api = {
   createPairingCode: () => request<{ code: string; expires_at: string }>("/api/v1/pairing-codes", { method: "POST" }),
   history: (subjectId: number) => request<History>(`/api/v1/subjects/${subjectId}/history`),
   connection: () => request<Connection>("/api/v1/srm/connection"),
+  startAuth: (netid: string) => request<AuthAttempt>("/api/v1/srm/auth-attempts", {
+    method: "POST",
+    body: JSON.stringify({ netid }),
+  }),
+  completeAuth: (attemptId: number, password: string) => request<AuthAttempt>(`/api/v1/srm/auth-attempts/${attemptId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  }),
   queueSync: () => request<SyncJob>("/api/v1/srm/sync", { method: "POST" }),
   syncJob: (jobId: number) => request<SyncJob>(`/api/v1/srm/sync-jobs/${jobId}`),
   disconnectSrm: () => request<void>("/api/v1/srm/connection", { method: "DELETE" }),

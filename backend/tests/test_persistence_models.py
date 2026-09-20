@@ -8,6 +8,7 @@ from srm_tracker.db_models import (
     AttendanceSnapshot,
     AuthAttempt,
     ConnectorDevice,
+    NotificationDelivery,
     NotificationOutbox,
     PairingCode,
     PushSubscription,
@@ -34,6 +35,7 @@ def test_persistence_metadata_contains_owned_tables_and_relationships() -> None:
         "sync_jobs",
         "push_subscriptions",
         "notification_outbox",
+        "notification_deliveries",
     }
 
     assert expected_tables == set(Base.metadata.tables)
@@ -47,6 +49,7 @@ def test_persistence_metadata_contains_owned_tables_and_relationships() -> None:
     assert User.auth_attempts.property.mapper.class_ is AuthAttempt
     assert User.sync_jobs.property.mapper.class_ is SyncJob
     assert User.push_subscriptions.property.mapper.class_ is PushSubscription
+    assert NotificationDelivery.notice.property.mapper.class_ is NotificationOutbox
 
 
 def test_subject_code_is_unique_per_owner() -> None:

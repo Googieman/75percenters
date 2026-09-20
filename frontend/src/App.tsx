@@ -1,10 +1,12 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { api, ApiError, Attendance, Connection, History, User } from "./api";
 import { formatGuidance, formatPercentage, formatSyncTime } from "./format";
-import { loadDashboardCache, saveDashboardCache } from "./offline";
+import { clearLegacyAttendanceStorage } from "./legacy-cache-cleanup";
 import { requestAndRegisterPush } from "./push";
 import "./styles.css";
+
+const UNAVAILABLE_MESSAGE = "Connection unavailable. Reconnect to load attendance.";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -12,6 +14,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    clearLegacyAttendanceStorage();
     api.me()
       .then((response) => setUser(response.user))
       .catch((reason: unknown) => {
@@ -41,6 +44,7 @@ function Login({ onLogin, error }: { onLogin: (user: User) => void; error: strin
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Sign-in failed.");
     } finally {
+      setPassword("");
       setBusy(false);
     }
   }
@@ -50,7 +54,7 @@ function Login({ onLogin, error }: { onLogin: (user: User) => void; error: strin
       <section className="panel">
         <p className="eyebrow">SRM Attendance Tracker</p>
         <h1>Sign in to your dashboard</h1>
-        <p className="muted">SRM authentication is completed through the hosted connection flow. This app never stores your SRM password.</p>
+        <p className="muted">SRM credentials are used only during an explicit CampusWeb connection. The tracker never stores this password.</p>
         <form onSubmit={submit} className="stack">
           <label>Email<input data-testid="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
           <label>Password<input data-testid="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
@@ -63,43 +67,84 @@ function Login({ onLogin, error }: { onLogin: (user: User) => void; error: strin
 }
 
 function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
-  const cached = loadDashboardCache(user.id);
-  const [attendance, setAttendance] = useState<Attendance | null>(cached?.attendance ?? null);
-  const [cachedAt, setCachedAt] = useState<string | null>(cached?.cachedAt ?? null);
-  const [offline, setOffline] = useState(Boolean(cached));
+  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const [connection, setConnection] = useState<Connection | null>(null);
+  const [activeJobId, setActiveJobId] = useState<number | null>(null);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<number, History>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showReconnect, setShowReconnect] = useState(false);
+  const [netid, setNetid] = useState("");
+  const [srmPassword, setSrmPassword] = useState("");
   const [target, setTarget] = useState(String(user.attendance_target));
 
+  const loadData = useCallback(async () => {
+    const [attendanceResult, connectionResult] = await Promise.allSettled([api.attendance(), api.connection()]);
+    if (attendanceResult.status === "fulfilled") {
+      setAttendance(attendanceResult.value);
+      setUnavailable(false);
+    } else if (attendanceResult.reason instanceof ApiError && attendanceResult.reason.status === 401) {
+      onLogout();
+      return;
+    } else {
+      setAttendance(null);
+      setUnavailable(true);
+      setMessage(UNAVAILABLE_MESSAGE);
+    }
+    if (connectionResult.status === "fulfilled") {
+      setConnection(connectionResult.value);
+      setActiveJobId(connectionResult.value.active_job_id ?? null);
+    }
+  }, [onLogout]);
+
   useEffect(() => {
+    clearLegacyAttendanceStorage();
+    void loadData();
+    if (new URLSearchParams(window.location.search).get("reconnect") === "1") setShowReconnect(true);
+    const retry = () => void loadData();
+    window.addEventListener("online", retry);
+    window.addEventListener("focus", retry);
+    return () => {
+      window.removeEventListener("online", retry);
+      window.removeEventListener("focus", retry);
+    };
+  }, [loadData]);
+
+  useEffect(() => {
+    if (activeJobId === null) return;
     let active = true;
-    Promise.allSettled([api.attendance(), api.connection()]).then(([attendanceResult, connectionResult]) => {
-      if (!active) return;
-      if (attendanceResult.status === "fulfilled") {
-        const fetched = attendanceResult.value;
-        setAttendance(fetched);
-        setCachedAt(fetched.last_successful_sync ?? new Date().toISOString());
-        setOffline(false);
-        saveDashboardCache(user.id, fetched, fetched.last_successful_sync ?? undefined);
-      } else if (attendanceResult.reason instanceof ApiError && attendanceResult.reason.status === 401) {
-        onLogout();
-      } else if (!cached) {
-        setMessage("Unable to load attendance. Try again when the connection is available.");
+    const poll = async () => {
+      try {
+        const job = await api.syncJob(activeJobId);
+        if (!active) return;
+        if (job.status === "succeeded") {
+          setActiveJobId(null);
+          setMessage("Attendance refreshed.");
+          await loadData();
+        } else if (["reauth_required", "paused", "failed", "canceled"].includes(job.status)) {
+          setActiveJobId(null);
+          await loadData();
+        }
+      } catch (reason) {
+        if (active && reason instanceof ApiError && reason.status === 401) onLogout();
       }
-      if (connectionResult.status === "fulfilled") setConnection(connectionResult.value);
-    });
-    return () => { active = false; };
-  }, [onLogout, user.id]);
+    };
+    const timer = window.setInterval(() => void poll(), 5000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [activeJobId, loadData, onLogout]);
 
   async function refresh() {
     setBusy(true);
     setMessage(null);
     try {
-      await api.queueSync();
-      setConnection((current) => current ? { ...current, status: "refreshing" } : current);
+      const job = await api.queueSync();
+      setActiveJobId(job.job_id);
+      setConnection((current) => current ? { ...current, status: "refreshing", active_job_id: job.job_id } : current);
       setMessage("Refresh queued. The hosted worker will update attendance in the background.");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Unable to queue refresh.");
@@ -108,12 +153,34 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     }
   }
 
+  async function reconnect(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const attempt = await api.startAuth(netid);
+      await api.completeAuth(attempt.attempt_id, srmPassword);
+      setShowReconnect(false);
+      setNetid("");
+      setMessage("CampusWeb connected. Your first refresh is queued.");
+      await loadData();
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "Unable to connect CampusWeb.");
+    } finally {
+      setSrmPassword("");
+      setBusy(false);
+    }
+  }
+
   async function disconnect() {
     setBusy(true);
     try {
       await api.disconnectSrm();
-      setConnection((current) => current ? { ...current, status: "disconnected" } : current);
-      setMessage("SRM disconnected. Your attendance history is still available.");
+      setConnection((current) => current ? { ...current, status: "disconnected", active_job_id: null } : current);
+      setActiveJobId(null);
+      setAttendance(null);
+      setUnavailable(true);
+      setMessage(UNAVAILABLE_MESSAGE);
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Unable to disconnect SRM.");
     } finally {
@@ -121,11 +188,11 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     }
   }
 
-  function reconnect() {
-    setMessage("Reconnect is required, but no verified hosted provider is enabled yet. No SRM password has been stored.");
-  }
-
   async function enableNotifications() {
+    if (!connection?.notifications_available) {
+      setMessage("Notifications are not configured on this deployment yet.");
+      return;
+    }
     try {
       const result = await requestAndRegisterPush(import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY);
       setMessage(
@@ -137,6 +204,9 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
               ? "This browser does not support push notifications."
               : "Notifications remain disabled.",
       );
+      if (result === "registered") {
+        setConnection((current) => current ? { ...current, notifications_available: true } : current);
+      }
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Unable to enable notifications.");
     }
@@ -168,8 +238,9 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
       return;
     }
     try {
-      const response = await api.updateSettings(value);
-      setAttendance((current) => current ? { ...current, attendance_target: response.attendance_target } : current);
+      await api.updateSettings(value);
+      const refreshed = await api.attendance();
+      setAttendance(refreshed);
       setMessage("Attendance target saved.");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Unable to save target.");
@@ -177,26 +248,31 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   }
 
   async function logout() {
-    try { await api.logout(); } finally { onLogout(); }
+    try { await api.logout(); } finally { clearLegacyAttendanceStorage(); onLogout(); }
   }
 
-  const connectionLabel = connection?.status === "connected"
-    ? "Connected"
-    : connection?.status === "refreshing"
+  const connectionLabel = unavailable
+    ? "Temporarily unavailable"
+    : activeJobId !== null || connection?.status === "refreshing"
       ? "Refreshing"
-      : connection?.status === "reauth_required"
-        ? "Reconnect required"
-        : connection?.status === "paused"
-          ? "Source changed"
-          : "Temporarily unavailable";
+      : connection?.status === "connected"
+        ? "Connected"
+        : connection?.status === "authenticating"
+          ? "Connecting"
+        : connection?.status === "reauth_required"
+          ? "Reconnect required"
+          : connection?.status === "paused"
+            ? "Source changed"
+            : connection?.status === "disconnected"
+              ? "Disconnected"
+              : "Temporarily unavailable";
 
   return (
     <main className="shell">
       <header className="topbar">
         <div><p className="eyebrow">SRM Attendance Tracker</p><h1>Welcome back</h1><p className="muted">{user.email}</p></div>
-        <button className="secondary" onClick={logout}>Sign out</button>
+        <button className="secondary" onClick={() => void logout()}>Sign out</button>
       </header>
-      {offline && cachedAt && <p className="notice" role="status">Saved data from {formatSyncTime(cachedAt)}. You are viewing cached attendance.</p>}
       {message && <p className="notice" role="status">{message}</p>}
       <section className="connection-panel panel" aria-label="SRM connection">
         <div>
@@ -206,21 +282,30 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         </div>
         <div className="button-row">
           {connection?.status === "connected" && <button onClick={() => void refresh()} disabled={busy}>Refresh now</button>}
-          {connection?.status !== "connected" && <button onClick={reconnect}>Reconnect SRM</button>}
+          {connection?.status !== "connected" && <button onClick={() => setShowReconnect(true)}>Reconnect SRM</button>}
           {connection?.status === "connected" && <button className="secondary" onClick={() => void disconnect()} disabled={busy}>Disconnect SRM</button>}
-          <button className="secondary" onClick={() => void enableNotifications()}>Enable notifications</button>
+          <button className="secondary" onClick={() => void enableNotifications()} disabled={!connection?.notifications_available}>Enable notifications</button>
         </div>
       </section>
+      {showReconnect && <section className="panel" aria-label="CampusWeb connection form">
+        <h2>Connect to CampusWeb</h2>
+        <p className="muted">Your credentials are forwarded to CampusWeb only for this request. The tracker does not retain your password.</p>
+        <form className="stack" onSubmit={(event) => void reconnect(event)}>
+          <label>CampusWeb NetID<input value={netid} onChange={(event) => setNetid(event.target.value)} autoComplete="username" required /></label>
+          <label>CampusWeb password<input aria-label="CampusWeb password" type="password" value={srmPassword} onChange={(event) => setSrmPassword(event.target.value)} autoComplete="current-password" required /></label>
+          <button disabled={busy}>{busy ? "Connecting…" : "Connect securely"}</button>
+        </form>
+      </section>}
       <section className="toolbar panel">
         <div><strong>Attendance target</strong><p className="muted">Guidance uses this target without changing stored history.</p></div>
-        <form className="inline-form" onSubmit={saveTarget}><label htmlFor="target">Target %</label><input id="target" type="number" min="1" max="100" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} /><button>Save</button></form>
+        <form className="inline-form" onSubmit={(event) => void saveTarget(event)}><label htmlFor="target">Target %</label><input id="target" type="number" min="1" max="100" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} /><button>Save</button></form>
       </section>
       <section className="toolbar panel">
         <div><strong>Optional legacy Chrome connector</strong><p className="muted">Use only if hosted acquisition is unavailable; it still requires a normal authenticated Chrome session.</p></div>
         <button onClick={() => void generatePairingCode()} data-testid="generate-pairing">Generate pairing code</button>
         {pairingCode && <code data-testid="pairing-code" className="pairing-code">{pairingCode}</code>}
       </section>
-      {!attendance ? <section className="panel"><p>Loading attendance…</p></section> : <>
+      {unavailable ? <section className="panel" role="alert"><h2>{UNAVAILABLE_MESSAGE}</h2><p className="muted">Attendance is intentionally not available offline.</p></section> : !attendance ? <section className="panel"><p>Loading attendance…</p></section> : <>
         <section className="summary-grid">
           <article className="panel"><span className="muted">Overall attendance</span><strong className="metric" data-testid="overall-percentage">{formatPercentage(attendance.overall.current_percentage)}</strong><span>Target {attendance.attendance_target}%</span></article>
           <article className="panel"><span className="muted">Last successful sync</span><strong data-testid="last-sync">{formatSyncTime(attendance.last_successful_sync)}</strong></article>

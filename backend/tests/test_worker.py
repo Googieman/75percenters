@@ -1,5 +1,8 @@
 
+from datetime import timedelta
+
 from srm_tracker.acquisition_provider import HostedSyncResult
+from srm_tracker.acquisition_service import disconnect_connection
 from srm_tracker.admin import bootstrap_account
 from srm_tracker.db_models import NotificationOutbox, SrmConnection, Subject, SyncJob
 from srm_tracker.schemas import AttendanceUpload, SubjectUpload
@@ -126,3 +129,37 @@ def test_worker_does_not_persist_provider_exception_text(
         assert job is not None
         assert job.last_error == "transient provider failure"
         assert "must-not-be-persisted" not in (job.last_error or "")
+
+
+def test_worker_honors_provider_retry_after(database_session_factory: object) -> None:
+    _user_id, job_id = _seed_job(database_session_factory)
+
+    class RetryAfterExecutor:
+        def fetch(self, claim: object) -> HostedSyncResult:
+            raise ProviderTransientFailure(retry_after=2 * 60 * 60)
+
+    worker = SyncWorker(database_session_factory, RetryAfterExecutor(), lease_seconds=120)
+    assert worker.run_once() == "retrying"
+    with database_session_factory() as session:  # type: ignore[operator]
+        job = session.get(SyncJob, job_id)
+        assert job is not None and job.status == "queued" and job.retry_at is not None
+        assert job.retry_at - job.created_at >= timedelta(hours=2)
+
+
+def test_late_retry_cannot_resurrect_a_disconnected_connection(
+    database_session_factory: object,
+) -> None:
+    user_id, job_id = _seed_job(database_session_factory)
+
+    class DisconnectingExecutor:
+        def fetch(self, claim: object) -> HostedSyncResult:
+            with database_session_factory() as other_session:  # type: ignore[operator]
+                disconnect_connection(other_session, user_id)
+            raise ProviderTransientFailure()
+
+    worker = SyncWorker(database_session_factory, DisconnectingExecutor(), lease_seconds=120)
+    assert worker.run_once() == "retrying"
+    with database_session_factory() as session:  # type: ignore[operator]
+        connection = session.query(SrmConnection).one()
+        assert connection.status == "disconnected"
+        assert session.get(SyncJob, job_id).status == "canceled"

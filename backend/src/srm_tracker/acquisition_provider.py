@@ -26,6 +26,7 @@ class ProviderSession:
 class HostedSyncResult:
     batch: AttendanceUpload
     term_context: str
+    session_state: bytes | None = None
 
 
 class AcquisitionProvider(Protocol):

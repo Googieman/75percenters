@@ -22,6 +22,44 @@ class SyncTooSoonError(ValueError):
         super().__init__("a refresh was completed too recently")
 
 
+def enqueue_due_scheduled_jobs(
+    session: DbSession,
+    *,
+    interval_minutes: int = 60,
+    now: datetime | None = None,
+) -> int:
+    """Queue one hourly refresh for every connected, due account."""
+    now = now or utc_now()
+    due_user_ids = session.scalars(
+        select(SrmConnection.user_id)
+        .where(
+            SrmConnection.status == "connected",
+            SrmConnection.encrypted_session_state.is_not(None),
+            or_(
+                SrmConnection.next_scheduled_refresh.is_(None),
+                SrmConnection.next_scheduled_refresh <= now,
+            ),
+        )
+        .order_by(SrmConnection.user_id)
+    ).all()
+    queued = 0
+    for user_id in due_user_ids:
+        try:
+            job = enqueue_sync_job(session, user_id, kind="scheduled", now=now)
+        except ConnectionRequiredError:
+            continue
+        connection = session.scalar(
+            select(SrmConnection).where(SrmConnection.user_id == user_id).with_for_update()
+        )
+        if connection is None:
+            continue
+        connection.next_scheduled_refresh = now + timedelta(minutes=interval_minutes)
+        session.commit()
+        if job.kind == "scheduled":
+            queued += 1
+    return queued
+
+
 @dataclass(frozen=True, slots=True)
 class JobClaim:
     job_id: int
@@ -29,6 +67,7 @@ class JobClaim:
     connection_id: int
     connection_generation: int
     fencing_generation: int
+    term_context: str | None
 
 
 def enqueue_sync_job(
@@ -139,6 +178,7 @@ def claim_due_job(
         connection_id=connection.id,
         connection_generation=connection.generation,
         fencing_generation=job.fencing_generation,
+        term_context=connection.term_context,
     )
 
 
@@ -150,7 +190,7 @@ def recover_abandoned_jobs(session: DbSession, *, now: datetime | None = None) -
             SyncJob.status == "claimed",
             SyncJob.claimed_until.is_not(None),
             SyncJob.claimed_until <= now,
-        )
+        ).with_for_update(skip_locked=True)
     ).all()
     for job in jobs:
         job.status = "queued"

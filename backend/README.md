@@ -44,9 +44,17 @@ The migration test explicitly upgrades from empty, downgrades to `base`, and upg
 
 ## Phone-first hosted foundation
 
-The server exposes safe connection status, durable refresh queueing, owned sync-job reads, disconnect, and Web Push subscription endpoints under `/api/v1`. A separate worker claims PostgreSQL-backed jobs with leases and fencing generations. `SRM_TRACKER_ACQUISITION_ENABLED` defaults to false: authentication start/complete remains unavailable until a legitimate Student Portal, SCOPE, or hosted-browser provider passes the evidence gates in `docs/PHONE_FIRST_ACQUISITION.md`.
+The server exposes safe connection status, durable refresh queueing, owned sync-job reads, disconnect, authentication attempts, and Web Push subscription endpoints under `/api/v1`. A separate worker claims PostgreSQL-backed jobs with leases and fencing generations, schedules connected accounts hourly, and dispatches VAPID notices. The fixed CampusWeb Student Portal adapter uses only the observed Student Portal routes and remains disabled by default with `SRM_TRACKER_ACQUISITION_ENABLED=false` until the evidence gates in `docs/PHONE_FIRST_ACQUISITION.md` pass.
 
-Production must provide `SRM_TRACKER_SESSION_ENCRYPTION_KEY` as a separately managed URL-safe base64 key containing 32 bytes. It encrypts provider session/challenge state with AES-GCM; the key is never stored in PostgreSQL.
+Production must provide `SRM_TRACKER_SESSION_ENCRYPTION_KEY` as a separately managed URL-safe base64 key containing 32 bytes. Optional retained read keys are supplied as a JSON object in `SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS`, for example `{"1":"<base64-key>"}`. Run `python scripts/rotate_session_keys.py` repeatedly until it prints `0` before retiring an old key. Keys encrypt provider session/challenge state with AES-GCM and are never stored in PostgreSQL.
+
+Start the hosted worker separately from the API after migrations:
+
+```powershell
+.\.venv\Scripts\python.exe -m srm_tracker.worker_entrypoint
+```
+
+The Render Blueprint at `../render.yaml` defines separate API and worker processes plus PostgreSQL. It contains no production secrets. Set the same active/read encryption keys and VAPID settings on both processes; keep acquisition disabled until the manual CampusWeb checkpoint and pilot are complete.
 
 ## API security model
 

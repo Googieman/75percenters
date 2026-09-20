@@ -191,7 +191,8 @@ class SrmConnection(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    verified_netid: Mapped[str] = mapped_column(String(128))
+    verified_netid: Mapped[str | None] = mapped_column(String(128))
+    pending_netid: Mapped[str | None] = mapped_column(String(128))
     provider: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="disconnected")
     encrypted_session_state: Mapped[bytes | None] = mapped_column(LargeBinary)
@@ -200,6 +201,9 @@ class SrmConnection(Base):
     term_context: Mapped[str | None] = mapped_column(String(128))
     last_authenticated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_scheduled_refresh: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
     last_error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=UTC_NOW
@@ -326,3 +330,35 @@ class NotificationOutbox(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="notification_outbox")
+    deliveries: Mapped[list["NotificationDelivery"]] = relationship(
+        back_populates="notice", cascade="all, delete-orphan"
+    )
+
+
+class NotificationDelivery(Base):
+    """Per-subscription delivery state for at-least-once Web Push."""
+
+    __tablename__ = "notification_deliveries"
+    __table_args__ = (
+        UniqueConstraint(
+            "notification_id", "subscription_id", name="uq_notification_delivery_target"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    notification_id: Mapped[int] = mapped_column(
+        ForeignKey("notification_outbox.id", ondelete="CASCADE"), index=True
+    )
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("push_subscriptions.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+    last_error: Mapped[str | None] = mapped_column(String(255))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    notice: Mapped[NotificationOutbox] = relationship(back_populates="deliveries")
+    subscription: Mapped[PushSubscription] = relationship()

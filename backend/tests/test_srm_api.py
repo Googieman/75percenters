@@ -1,7 +1,11 @@
+import base64
 from datetime import timedelta
 
+from srm_tracker.acquisition_provider import HostedSyncResult, ProviderChallenge, ProviderSession
 from srm_tracker.admin import bootstrap_account
+from srm_tracker.campusweb_provider import CAMPUSWEB_STUDENT_PORTAL
 from srm_tracker.db_models import SrmConnection, SyncJob
+from srm_tracker.schemas import AttendanceUpload, SubjectUpload
 from srm_tracker.time import utc_now
 
 
@@ -13,6 +17,105 @@ def _login(client: object) -> str:
     )
     assert response.status_code == 200
     return response.json()["csrf_token"]
+
+
+class TestProvider:
+    name = CAMPUSWEB_STUDENT_PORTAL
+
+    def start_authentication(self, netid: str) -> ProviderChallenge:
+        return ProviderChallenge("password", "Enter password", netid.encode())
+
+    def complete_authentication(
+        self, challenge: ProviderChallenge, password: str, response: str | None
+    ) -> ProviderSession:
+        assert password == "campus-password"
+        del response
+        return ProviderSession(challenge.state or b"", "AB1234", "2026-T1")
+
+    def fetch_attendance(self, session: ProviderSession) -> HostedSyncResult:
+        del session
+        return HostedSyncResult(
+            AttendanceUpload(
+                subjects=[
+                    SubjectUpload(
+                        code="CSE1",
+                        subject="Algorithms",
+                        total_hours=1,
+                        attended_hours=1,
+                        absent_hours=0,
+                        source_percentage="100",
+                    )
+                ]
+            ),
+            "2026-T1",
+        )
+
+    def disconnect(self, session: ProviderSession) -> None:
+        del session
+
+
+def _enable_provider(app_client: object) -> None:
+    app_client.app.state.settings.acquisition_enabled = True  # type: ignore[union-attr]
+    app_client.app.state.settings.session_encryption_key = base64.urlsafe_b64encode(  # type: ignore[union-attr]
+        bytes(range(32))
+    ).decode()
+    app_client.app.state.acquisition_provider = TestProvider()  # type: ignore[union-attr]
+
+
+def test_authentication_attempt_promotes_verified_identity_and_queues_first_refresh(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        bootstrap_account(session, "owner@example.com", "a-very-long-password")
+    _enable_provider(app_client)
+    csrf = _login(app_client)
+
+    started = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        "/api/v1/srm/auth-attempts",
+        headers={"X-CSRF-Token": csrf},
+        json={"netid": "AB1234"},
+    )
+    assert started.status_code == 201
+    attempt_id = started.json()["attempt_id"]
+
+    completed = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        f"/api/v1/srm/auth-attempts/{attempt_id}/complete",
+        headers={"X-CSRF-Token": csrf},
+        json={"password": "campus-password"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "succeeded"
+
+    with database_session_factory() as session:  # type: ignore[operator]
+        connection = session.query(SrmConnection).one()
+        assert connection.provider == CAMPUSWEB_STUDENT_PORTAL
+        assert connection.pending_netid is None
+        assert connection.verified_netid == "AB1234"
+        assert connection.encrypted_session_state is not None
+        assert b"campus-password" not in connection.encrypted_session_state
+        assert session.query(SyncJob).one().status == "queued"
+
+
+def test_client_cannot_select_a_provider_for_authentication(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        bootstrap_account(session, "owner@example.com", "a-very-long-password")
+    _enable_provider(app_client)
+    csrf = _login(app_client)
+
+    response = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        "/api/v1/srm/auth-attempts",
+        headers={"X-CSRF-Token": csrf},
+        json={"provider": "academia", "netid": "AB1234"},
+    )
+
+    assert response.status_code == 422
 
 
 def test_connection_status_is_safe_and_source_independent(
@@ -45,7 +148,7 @@ def test_authentication_attempts_are_feature_gated_before_accepting_credentials(
         "POST",
         "/api/v1/srm/auth-attempts",
         headers={"X-CSRF-Token": csrf},
-        json={"provider": "student_portal", "netid": "AB1234"},
+        json={"netid": "AB1234"},
     )
 
     assert response.status_code == 503
@@ -139,7 +242,7 @@ def test_push_subscription_can_be_replaced_and_removed(
         bootstrap_account(session, "owner@example.com", "a-very-long-password")
     csrf = _login(app_client)
     payload = {
-        "endpoint": "https://push.example/subscription/1",
+        "endpoint": "https://fcm.googleapis.com/fcm/send/subscription-1",
         "keys": {"p256dh": "public-key", "auth": "auth-secret"},
     }
 

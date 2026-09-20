@@ -2,6 +2,8 @@
 
 from datetime import datetime
 from decimal import Decimal
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
 from pydantic import (
     AnyHttpUrl,
@@ -133,19 +135,23 @@ class HistoryResponse(BaseModel):
 class SrmConnectionResponse(BaseModel):
     status: str
     provider: str | None
+    provider_available: bool
     netid_hint: str | None
     last_authenticated_at: datetime | None
     last_refreshed_at: datetime | None
     last_successful_sync: datetime | None
+    active_job_id: int | None
+    next_scheduled_refresh: datetime | None
+    last_error_code: str | None
+    notifications_available: bool
 
 
 class AuthAttemptStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider: str = Field(min_length=1, max_length=64)
     netid: str = Field(min_length=1, max_length=128)
 
-    @field_validator("provider", "netid")
+    @field_validator("netid")
     @classmethod
     def normalize_identifier(cls, value: str) -> str:
         value = " ".join(value.split())
@@ -195,6 +201,27 @@ class PushSubscriptionRequest(BaseModel):
 
     endpoint: AnyHttpUrl
     keys: PushSubscriptionKeys
+
+    @field_validator("endpoint")
+    @classmethod
+    def supported_public_endpoint(cls, value: AnyHttpUrl) -> AnyHttpUrl:
+        parsed = urlsplit(str(value))
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        allowed_hosts = (
+            "fcm.googleapis.com",
+            "updates.push.services.mozilla.com",
+            "push.services.mozilla.com",
+            "notify.windows.com",
+            "web.push.apple.com",
+        )
+        try:
+            parsed_ip = ip_address(hostname)
+        except ValueError:
+            parsed_ip = None
+        allowed = any(hostname == host or hostname.endswith(f".{host}") for host in allowed_hosts)
+        if parsed.scheme != "https" or not hostname or parsed_ip is not None or not allowed:
+            raise ValueError("push endpoint must be a supported public HTTPS service")
+        return value
 
 
 class PushSubscriptionResponse(BaseModel):

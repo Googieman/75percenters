@@ -63,6 +63,8 @@ def process_acquisition_ingestion(
     expected_connection_generation: int | None = None,
     expected_fencing_generation: int | None = None,
     term_context: str | None = None,
+    expected_term_context: str | None = None,
+    commit: bool = True,
 ) -> UploadResult:
     """Apply any verified source's batch atomically for one owner.
 
@@ -104,6 +106,11 @@ def process_acquisition_ingestion(
                 and connection.generation != expected_connection_generation
             ):
                 raise StaleAcquisitionError("SRM connection was superseded")
+            if (
+                expected_term_context is not None
+                and connection.term_context != expected_term_context
+            ):
+                raise StaleAcquisitionError("SRM connection context was superseded")
 
         job = None
         if job_id is not None:
@@ -195,7 +202,8 @@ def process_acquisition_ingestion(
             job.last_error = None
             job.completed_at = synced_at
             job.claimed_until = None
-        session.commit()
+        if commit:
+            session.commit()
         return UploadResult(
             snapshots_created=snapshots_created,
             subjects_received=len(batch.subjects),
