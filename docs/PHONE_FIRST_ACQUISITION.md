@@ -4,7 +4,7 @@
 
 The production shape is Android PWA → hosted FastAPI → an evidence-approved SRM acquisition provider → the existing PostgreSQL attendance/history store. Render will run the API and a separate background worker; the PWA origin will proxy `/api/v1/*` to FastAPI. The worker is durable and PostgreSQL-backed, so refresh does not depend on an open phone, browser tab, or in-process API task.
 
-The CampusWeb Student Portal adapter is implemented but remains feature-gated until authorized own-account and hosted-runtime evidence is complete. No SCOPE or hosted-browser fallback is used.
+The CampusWeb Student Portal adapter is implemented but remains feature-gated until authorized own-account and hosted-runtime evidence is complete. The execution checklist is [STAGING_VERIFICATION_CHECKLIST.md](STAGING_VERIFICATION_CHECKLIST.md). No SCOPE or hosted-browser fallback is used.
 
 ## Implemented foundation
 

@@ -22,7 +22,7 @@ Application sessions are secure, HTTP-only cookies with CSRF validation for stat
 
 ## UX and offline behavior
 
-The mobile-first dashboard presents overall attendance, subject indicators, shortage warnings, sync recency, and clear loading/error/empty states. The Sync affordance explains that a paired Chrome extension is required and is unavailable for direct mobile portal refresh. The service worker caches the app shell and last successful attendance responses; offline data is visibly labeled saved/cached rather than current.
+The mobile-first dashboard presents overall attendance, subject indicators, shortage warnings, sync recency, and clear loading/error/empty states. The Sync affordance explains the current connection state and supports the hosted provider when it is enabled. The service worker caches only the app shell; authenticated API responses and attendance/authentication state are never cached, so offline attendance shows the unavailable state.
 
 ## Verification boundaries
 
