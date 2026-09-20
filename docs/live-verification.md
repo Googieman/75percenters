@@ -76,16 +76,20 @@ From `backend`, apply migrations and create the first tracker account if the dat
 
 ```powershell
 $env:SRM_TRACKER_DATABASE_URL = "postgresql+psycopg://srm_tracker:srm_tracker@127.0.0.1:5433/srm_tracker"
-.\.venv\Scripts\python.exe -m alembic upgrade head
-.\.venv\Scripts\python.exe -m srm_tracker.admin bootstrap
+$python = "C:\Users\varug\Attendance-extractor\backend\.venv\Scripts\python.exe"
+& $python -m alembic upgrade head
+& $python -m srm_tracker.admin bootstrap
 ```
+
+Use the Python interpreter configured for this checkout if it differs from the path above.
 
 Run the API and dashboard with the origins above. From `connector`, build the unpacked package:
 
 From `backend`:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn srm_tracker.main:create_app --factory --app-dir src --host 127.0.0.1 --port 8000
+$python = "C:\Users\varug\Attendance-extractor\backend\.venv\Scripts\python.exe"
+& $python -m uvicorn srm_tracker.main:create_app --factory --app-dir src --host 127.0.0.1 --port 8000
 ```
 
 From `frontend`:
