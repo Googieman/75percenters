@@ -4,7 +4,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 
 ## Current milestone
 
-**Task 5 — complete local connector-to-dashboard verification** is complete. The repository now has the responsive PWA, packaged MV3 connector, and a disposable local runner that drives the real browser extension, FastAPI API, PostgreSQL database, and dashboard together.
+**Task 6 — live connector verification** is in progress. Task 5 established the local flow; Task 6 is prepared with a separate persistent local database and a sanitized evidence record, pending normal Chrome/SRM interaction.
 
 ## Completed work
 
@@ -26,6 +26,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - Added the packaged Manifest V3 connector with `activeTab`, user-triggered main-world collection, strict response validation, stable collector error codes, exact popup-message provenance checks, pairing, revocation handling, and duplicate-sync protection.
 - Added `scripts/run_local_e2e.ps1` and `npm run test:e2e`. Each run creates a uniquely named loopback-only PostgreSQL 16 container with temporary storage, applies migrations, bootstraps a synthetic account, starts real API/PWA processes, builds the connector into a run-owned directory, and tears down only its own resources.
 - Test-drove collector regressions for both `Att. hours` and `Attended hours`, body-read timeout coverage, ambiguous controls, frame and navigation changes, malformed results, exact popup URLs, and upload payloads containing only structured subjects.
+- Prepared the Task 6 live-verification record at `docs/live-verification.md` and a dedicated persistent PostgreSQL 16 container on loopback port 5433. The database is migrated but has no tracker account yet.
 
 ## Architecture decisions
 
@@ -39,7 +40,7 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 ## Remaining milestones
 
 1. Expand the PWA with offline cached-data labeling and the remaining production-facing dashboard polish.
-2. Task 6: perform the one live portal verification in normal Chrome while already logged into SRM, then record the confirmed live DOM/request details.
+2. Task 6: perform the one live portal verification in normal Chrome while already logged into SRM, then record the confirmed live DOM/request details in `docs/live-verification.md`.
 3. Complete production checks, Render Blueprint, and secure environment configuration.
 4. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
 
@@ -124,5 +125,5 @@ Not started. No Render resources, paid plans, GitHub remote, live URL, or produc
 ## Blockers and manual verification
 
 - The successful attendance HTML fixture is locally authored and sanitized to reflect the confirmed six-column contract; a real response must never be committed.
-- Live SRM syncing is intentionally unverified. Task 6 must use normal Chrome with the user completing SRM login/CAPTCHA themselves: build the connector for the authorized API origin, pair it from the PWA, open the attendance report, press **Sync**, and confirm the dashboard receives the reported totals. Do not use the legacy scraper or a Playwright-launched SRM login.
+- Live SRM syncing is prepared but intentionally unverified. Task 6 must use normal Chrome with the user completing SRM login/CAPTCHA themselves: create the local tracker account, build the connector for the local API origin, pair it from the PWA, open the attendance report, press the actual toolbar popup's **Sync**, and confirm the dashboard receives the reported totals. Do not use the legacy scraper or a Playwright-launched SRM login.
 - Production deployment will require Render account authorization, a durable PostgreSQL plan approved by the user, secure secret entry, and (if not already connected) source-host authorization.
