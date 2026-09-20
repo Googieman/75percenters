@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     login_rate_limit_attempts: int = 5
     pairing_rate_limit_attempts: int = 10
     rate_limit_window_seconds: int = 900
+    session_encryption_key: str | None = None
+    session_encryption_key_version: int = 1
+    acquisition_enabled: bool = False
+    sync_poll_interval_seconds: int = 30
+    sync_minimum_interval_minutes: int = 5
+    sync_hourly_interval_minutes: int = 60
 
     @field_validator("frontend_origin")
     @classmethod
@@ -49,6 +55,27 @@ class Settings(BaseSettings):
     def positive_rate_limit(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("rate limit settings must be positive")
+        return value
+
+    @field_validator("session_encryption_key")
+    @classmethod
+    def production_requires_encryption_key(
+        cls, value: str | None, info: ValidationInfo
+    ) -> str | None:
+        if info.data.get("environment") == "production" and not value:
+            raise ValueError("Production requires a session encryption key")
+        return value
+
+    @field_validator(
+        "session_encryption_key_version",
+        "sync_poll_interval_seconds",
+        "sync_minimum_interval_minutes",
+        "sync_hourly_interval_minutes",
+    )
+    @classmethod
+    def positive_acquisition_setting(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("acquisition settings must be positive")
         return value
 
 

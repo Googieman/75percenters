@@ -20,6 +20,11 @@ h2 { font-size: 1rem; margin-bottom: 0; }
 .muted { color: #64748b; }
 .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; }
 .toolbar p { margin: 4px 0 0; }
+.connection-panel { align-items: center; display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; margin-bottom: 20px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.inline-form { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.inline-form label { font-weight: 600; }
+.inline-form input { width: 92px; }
 .pairing-code { background: #f1f5f9; border-radius: .5rem; font-size: 1.1rem; letter-spacing: .08em; padding: .6rem .8rem; }
 .summary-grid, .subject-grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .subject-grid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }

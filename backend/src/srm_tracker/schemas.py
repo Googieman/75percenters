@@ -3,7 +3,15 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    field_validator,
+    model_validator,
+)
 
 
 class SubjectUpload(BaseModel):
@@ -120,3 +128,74 @@ class HistoryItem(BaseModel):
 class HistoryResponse(BaseModel):
     items: list[HistoryItem]
     next_cursor: str | None
+
+
+class SrmConnectionResponse(BaseModel):
+    status: str
+    provider: str | None
+    netid_hint: str | None
+    last_authenticated_at: datetime | None
+    last_refreshed_at: datetime | None
+    last_successful_sync: datetime | None
+
+
+class AuthAttemptStartRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(min_length=1, max_length=64)
+    netid: str = Field(min_length=1, max_length=128)
+
+    @field_validator("provider", "netid")
+    @classmethod
+    def normalize_identifier(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("value must not be blank")
+        return value
+
+
+class AuthAttemptCompleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: str | None = Field(default=None, min_length=1, max_length=1024)
+    response: str | None = Field(default=None, min_length=1, max_length=1024)
+
+
+class AuthAttemptResponse(BaseModel):
+    attempt_id: int
+    status: str
+    challenge_type: str | None
+    message: str | None
+    expires_at: datetime
+
+
+class SyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SyncJobResponse(BaseModel):
+    job_id: int
+    status: str
+    scheduled_for: datetime
+    attempt_count: int
+    result_code: str | None
+    retry_at: datetime | None
+    completed_at: datetime | None
+
+
+class PushSubscriptionKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    p256dh: str = Field(min_length=1, max_length=255)
+    auth: str = Field(min_length=1, max_length=255)
+
+
+class PushSubscriptionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: AnyHttpUrl
+    keys: PushSubscriptionKeys
+
+
+class PushSubscriptionResponse(BaseModel):
+    subscription_id: int

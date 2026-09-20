@@ -15,6 +15,14 @@ EXPECTED_HEADERS = (
     "absent hours",
     "total percentage",
 )
+HEADER_VARIANTS = (
+    {"code"},
+    {"description"},
+    {"max. hours"},
+    {"attended hours", "att. hours"},
+    {"absent hours"},
+    {"total percentage"},
+)
 
 
 class AttendanceParseError(ValueError):
@@ -54,7 +62,10 @@ def _find_attendance_table(soup: BeautifulSoup) -> tuple[Tag, int]:
         for index, row in enumerate(rows):
             headers = row.find_all(["th", "td"], recursive=False)
             normalized_headers = tuple(_normalized_text(_cell_text(header)) for header in headers)
-            if normalized_headers == EXPECTED_HEADERS:
+            if len(normalized_headers) == len(HEADER_VARIANTS) and all(
+                header in variants
+                for header, variants in zip(normalized_headers, HEADER_VARIANTS, strict=True)
+            ):
                 return table, index
     raise AttendanceParseError("Attendance table not found in SRM response")
 

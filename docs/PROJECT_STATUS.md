@@ -1,10 +1,10 @@
 # SRM Attendance Tracker — Project Status
 
-Last updated: 2026-09-20 (Asia/Kolkata)
+Last updated: 2026-09-21 (Asia/Kolkata)
 
 ## Current milestone
 
-**Task 6 — live connector verification** is complete for the authenticated report flow. The separate persistent local database and sanitized evidence record are retained for local development; live portal-expiry testing remains intentionally untested.
+**Phone-first hosted acquisition foundation — provider-gated.** The existing authenticated Chrome fallback remains verified. The hosted connection boundary, encrypted server-side state, durable jobs, source-independent ingestion, push outbox, and PWA status/offline behavior are implemented. No concrete hosted provider is enabled because the Student Portal HTTP, SCOPE, and hosted-browser feasibility gates have not been completed.
 
 ## Completed work
 
@@ -27,6 +27,14 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - Added `scripts/run_local_e2e.ps1` and `npm run test:e2e`. Each run creates a uniquely named loopback-only PostgreSQL 16 container with temporary storage, applies migrations, bootstraps a synthetic account, starts real API/PWA processes, builds the connector into a run-owned directory, and tears down only its own resources.
 - Test-drove collector regressions for both `Att. hours` and `Attended hours`, body-read timeout coverage, ambiguous controls, frame and navigation changes, malformed results, exact popup URLs, and upload payloads containing only structured subjects.
 - Completed the Task 6 live-verification record at `docs/live-verification.md` using a dedicated persistent PostgreSQL 16 container on loopback port 55433. The normal Chrome report flow, structured upload, dashboard refresh, unchanged repeat, and same-origin non-report rejection all passed.
+- Reconciled the phone-first redesign against the verified `d40c367` baseline, preserving the existing frontend, connector, margin/required guidance, and fallback behavior.
+- Added the verified Python `Att. hours` parser alias and migration `0002_hosted_acquisition` for SRM connections, expiring auth attempts, leased/fenced sync jobs, push subscriptions, notification outbox, and source-independent sync freshness.
+- Extracted source-independent transactional ingestion with connection-generation and job-fence checks; connector uploads still require a live non-revoked connector device.
+- Added AES-GCM server-side session/challenge-state encryption with owner/provider/generation binding and production key validation. No SRM password, OTP, cookie, token, or raw portal response is persisted.
+- Added the provider protocol, durable worker orchestration, transient retry timing, lease recovery, source-change pausing, and deduplicated reauthentication notices. No provider implementation is enabled before feasibility evidence.
+- Added `/api/v1/srm/connection`, `/api/v1/srm/auth-attempts`, `/api/v1/srm/sync`, `/api/v1/srm/sync-jobs`, disconnect, and Web Push subscription routes with session/CSRF/ownership controls.
+- Added phone-first PWA connection states, explicit hosted refresh, account-scoped offline labeling, push-permission plumbing, service-worker install assets, and target-setting UI while retaining the optional legacy connector.
+- Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the concrete Student Portal/SCOPE/hosted-browser adapter remains blocked on legitimate hosted evidence rather than being guessed.
 
 ## Architecture decisions
 
@@ -36,12 +44,14 @@ Last updated: 2026-09-20 (Asia/Kolkata)
 - `scraper.py` is retained locally as an inspected legacy reference only and intentionally excluded from Git. It will not be run, extended, or used in the production path.
 - The live report is displayed at `HRDSystem.jsp` while attendance is fetched from the verified POST endpoint `studentAttendanceDetails.jsp`. The current top-level form uses `hdnFormDetails` and the observed hidden request controls, with a unique hidden `csrfPreventionSalt`; the collector also requires the visible six-column attendance header so same-origin portal pages fail closed.
 - The local response contract accepts the observed `Att. hours` spelling and the earlier `Attended hours` spelling. Passing local fixtures establish integration behavior only; they do not establish live SRM compatibility.
+- Hosted acquisition is a separate server-side provider boundary. Its feature flag defaults to disabled, its provider state is encrypted outside PostgreSQL's trust boundary, and worker claims are fenced by both job and connection generation.
 
 ## Remaining milestones
 
-1. Expand the PWA with offline cached-data labeling and the remaining production-facing dashboard polish.
-2. Complete production checks, Render Blueprint, and secure environment configuration.
-3. Provision and verify Render deployment after the user authorizes the account connection, database plan, and production secrets.
+1. Complete the bounded Student Portal HTTP, SCOPE equivalence, and hosted-browser feasibility gates; select exactly one provider from sanitized evidence.
+2. Implement only that selected provider's authenticated challenge/session/attendance contract behind the existing adapter and feature flag.
+3. Deploy a staging API/worker/database and run the seven-day phone-only pilot, including session expiry and Android reconnect.
+4. Complete the Render/Vercel release configuration and provision production only after the user authorizes accounts, plans, source hosting, and secrets.
 
 ## Exact commands to resume
 
@@ -64,6 +74,8 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m mypy src
 ```
+
+Current verification on the phone-first branch: 66 backend tests, Ruff, mypy, and pip check pass; 12 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass; the local browser flow passes 6 Playwright scenarios. These checks use sanitized fixtures and disposable PostgreSQL only.
 
 Task 5 local flow command:
 
@@ -125,4 +137,5 @@ Not started. No Render resources, paid plans, GitHub remote, live URL, or produc
 
 - The successful attendance HTML fixture is locally authored and sanitized to reflect the confirmed six-column contract; a real response must never be committed.
 - Live SRM syncing is verified for the normal authenticated Chrome flow. The user completed SRM login/CAPTCHA themselves; the connector was paired from the PWA, the actual Chrome Extensions toolbar popup collected from the report, the dashboard/history persisted the structured result, and an unchanged repeat remained idempotent. Same-origin non-report pages now fail closed. Do not use the legacy scraper or a Playwright-launched SRM login.
+- Hosted acquisition is not yet feasible to claim: no legitimate hosted login/session-restoration/expiry evidence or SCOPE equivalence evidence is recorded. Keep the hosted feature disabled and do not enter real SRM credentials into automated tests.
 - Production deployment will require Render account authorization, a durable PostgreSQL plan approved by the user, secure secret entry, and (if not already connected) source-host authorization.

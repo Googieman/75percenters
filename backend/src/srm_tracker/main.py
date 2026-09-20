@@ -12,6 +12,7 @@ from srm_tracker.auth import router as auth_router
 from srm_tracker.config import Settings, get_settings
 from srm_tracker.db import session_factory_for_engine
 from srm_tracker.pairing import router as pairing_router
+from srm_tracker.srm_api import router as srm_router
 
 
 def create_app(
@@ -40,6 +41,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(pairing_router)
     app.include_router(attendance_router)
+    app.include_router(srm_router)
 
     @app.get("/api/v1/health")
     def health() -> dict[str, str]:

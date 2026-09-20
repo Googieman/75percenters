@@ -33,6 +33,23 @@ export type HistoryItem = {
   guidance: Guidance;
 };
 export type History = { items: HistoryItem[]; next_cursor: string | null };
+export type Connection = {
+  status: "disconnected" | "authenticating" | "connected" | "reauth_required" | "paused" | string;
+  provider: string | null;
+  netid_hint: string | null;
+  last_authenticated_at: string | null;
+  last_refreshed_at: string | null;
+  last_successful_sync: string | null;
+};
+export type SyncJob = {
+  job_id: number;
+  status: string;
+  scheduled_for: string;
+  attempt_count: number;
+  result_code: string | null;
+  retry_at: string | null;
+  completed_at: string | null;
+};
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -74,4 +91,23 @@ export const api = {
   attendance: () => request<Attendance>("/api/v1/attendance"),
   createPairingCode: () => request<{ code: string; expires_at: string }>("/api/v1/pairing-codes", { method: "POST" }),
   history: (subjectId: number) => request<History>(`/api/v1/subjects/${subjectId}/history`),
+  connection: () => request<Connection>("/api/v1/srm/connection"),
+  queueSync: () => request<SyncJob>("/api/v1/srm/sync", { method: "POST" }),
+  syncJob: (jobId: number) => request<SyncJob>(`/api/v1/srm/sync-jobs/${jobId}`),
+  disconnectSrm: () => request<void>("/api/v1/srm/connection", { method: "DELETE" }),
+  updateSettings: (attendanceTarget: number) =>
+    request<{ attendance_target: number }>("/api/v1/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ attendance_target: attendanceTarget }),
+    }),
+  registerPush: (subscription: PushSubscriptionJSON) =>
+    request<{ subscription_id: number }>("/api/v1/push-subscriptions", {
+      method: "POST",
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        keys: subscription.keys,
+      }),
+    }),
+  deletePush: (subscriptionId: number) =>
+    request<void>(`/api/v1/push-subscriptions/${subscriptionId}`, { method: "DELETE" }),
 };

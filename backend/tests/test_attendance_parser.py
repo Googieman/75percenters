@@ -18,6 +18,13 @@ def test_parses_documented_course_table(valid_html: str) -> None:
     assert records[1].source_percentage == Decimal("100")
 
 
+def test_parses_verified_att_hours_header_alias(valid_html: str) -> None:
+    records = parse_attendance_html(valid_html.replace("Attended hours", "Att. hours"))
+
+    assert len(records) == 2
+    assert records[0].attended_hours == 16
+
+
 def test_rejects_login_page(login_html: str) -> None:
     with pytest.raises(AttendanceParseError, match="authentication"):
         parse_attendance_html(login_html)

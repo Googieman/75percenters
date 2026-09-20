@@ -20,7 +20,15 @@ def test_migrations_upgrade_downgrade_and_reupgrade() -> None:
     try:
         command.downgrade(alembic_config, "base")
         command.upgrade(alembic_config, "head")
-        assert "users" in inspect(engine).get_table_names()
+        table_names = set(inspect(engine).get_table_names())
+        assert "users" in table_names
+        assert {
+            "srm_connections",
+            "srm_auth_attempts",
+            "sync_jobs",
+            "push_subscriptions",
+            "notification_outbox",
+        } <= table_names
         command.downgrade(alembic_config, "base")
         assert "users" not in inspect(engine).get_table_names()
         command.upgrade(alembic_config, "head")
