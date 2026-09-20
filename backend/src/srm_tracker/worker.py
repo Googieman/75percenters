@@ -67,8 +67,8 @@ class SyncWorker:
         except ProviderContractChanged:
             self._mark_source_changed(claim)
             return "source_changed"
-        except ProviderTransientFailure as error:
-            self._schedule_retry(claim, str(error))
+        except ProviderTransientFailure:
+            self._schedule_retry(claim)
             return "retrying"
 
         with self.session_factory() as session:
@@ -165,7 +165,7 @@ class SyncWorker:
             job.completed_at = utc_now()
             session.commit()
 
-    def _schedule_retry(self, claim: JobClaim, error_message: str) -> None:
+    def _schedule_retry(self, claim: JobClaim) -> None:
         with self.session_factory() as session:
             job = session.scalar(
                 select(SyncJob).where(SyncJob.id == claim.job_id).with_for_update()
@@ -180,5 +180,5 @@ class SyncWorker:
             job.retry_at = retry_at
             job.scheduled_for = retry_at
             job.result_code = "transient_failure"
-            job.last_error = error_message[:255]
+            job.last_error = "transient provider failure"
             session.commit()

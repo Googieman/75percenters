@@ -7,6 +7,7 @@ from srm_tracker.sync_jobs import enqueue_sync_job
 from srm_tracker.worker import (
     ProviderContractChanged,
     ProviderReauthenticationRequired,
+    ProviderTransientFailure,
     SyncWorker,
 )
 
@@ -106,3 +107,22 @@ def test_worker_pauses_connection_when_provider_contract_changes(
     with database_session_factory() as session:  # type: ignore[operator]
         assert session.query(SrmConnection).one().status == "paused"
         assert session.get(SyncJob, job_id).status == "paused"
+
+
+def test_worker_does_not_persist_provider_exception_text(
+    database_session_factory: object,
+) -> None:
+    _user_id, job_id = _seed_job(database_session_factory)
+
+    class LeakyExecutor:
+        def fetch(self, claim: object) -> HostedSyncResult:
+            raise ProviderTransientFailure("password=must-not-be-persisted")
+
+    worker = SyncWorker(database_session_factory, LeakyExecutor(), lease_seconds=120)
+
+    assert worker.run_once() == "retrying"
+    with database_session_factory() as session:  # type: ignore[operator]
+        job = session.get(SyncJob, job_id)
+        assert job is not None
+        assert job.last_error == "transient provider failure"
+        assert "must-not-be-persisted" not in (job.last_error or "")
