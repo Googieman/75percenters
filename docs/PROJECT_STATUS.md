@@ -38,6 +38,9 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 - Added phone-first PWA connection states, explicit hosted refresh, five-second job polling, Connect/Reconnect with password clearing, no attendance/authentication browser persistence, push reconnect handling, service-worker install assets, and target-setting reload behavior while retaining the optional legacy connector.
 - Added `render.yaml` for separate API/worker/PostgreSQL services and `vercel.json` for the same-origin API rewrite. No accounts, paid resources, domains, or secrets were provisioned.
 - Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the adapter is ready for sanitized verification but not enabled by default.
+- Added `scripts/bootstrap-dev.ps1` to create the pinned Python environment and install frontend/connector dependencies from their lockfiles.
+- Added `docs/STAGING_VERIFICATION_CHECKLIST.md` for the own-account checkpoint and seven-day Android pilot; it records only sanitized outcomes.
+- Updated the implementation plan and design record so offline behavior matches the shipped PWA: the app shell may be cached, while authenticated API responses and attendance state are not.
 
 ## Architecture decisions
 
@@ -75,6 +78,13 @@ Set-Location C:\Users\varug\Attendance-extractor\backend
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m ruff check .
 .\.venv\Scripts\python.exe -m mypy src
+```
+
+To prepare a fresh Windows checkout, run:
+
+```powershell
+Set-Location C:\Users\varug\Attendance-extractor
+.\scripts\bootstrap-dev.ps1
 ```
 
 Current verification on the phone-first branch: 92 backend tests, Ruff, mypy, and pip check pass; 13 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass. These checks use sanitized fixtures and disposable PostgreSQL only.

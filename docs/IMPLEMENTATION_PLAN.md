@@ -13,7 +13,7 @@ This plan is intentionally milestone-based so every session can end at a clean, 
 
 The phone-first redesign in `docs/PHONE_FIRST_ACQUISITION.md` supersedes the assumption that the desktop connector is the production acquisition path. The existing connector remains an optional, verified fallback. The hosted foundation is implemented behind `SRM_TRACKER_ACQUISITION_ENABLED=false` by default.
 
-The next implementation gate is evidence, not a guessed adapter: complete the bounded Student Portal HTTP, SCOPE equivalence, and hosted-browser experiments from the redesign brief; select one provider; then implement only that provider. Do not store SRM passwords, cookies, profiles, raw responses, CAPTCHA answers, OTPs, or browser fingerprint values. Do not claim hourly hosted refresh or Android reauthentication until the seven-day staging pilot proves it.
+The next implementation gate is authorized evidence for the implemented CampusWeb Student Portal adapter: complete the own-account login, restart restoration, attendance equivalence, expiry/recovery, and hosted-runtime checkpoint. Do not store SRM passwords, cookies, profiles, raw responses, CAPTCHA answers, OTPs, or browser fingerprint values. Do not claim hourly hosted refresh or Android reauthentication until the seven-day staging pilot proves it.
 
 ## Milestone 0 — Repository control plane
 
@@ -45,12 +45,12 @@ The next implementation gate is evidence, not a guessed adapter: complete the bo
 
 ## Milestone 3 — Responsive PWA dashboard
 
-**Deliverable:** Accessible installable dashboard and subject-detail views with theme support, target setting, historical cumulative snapshots, explicit connector guidance, and safely labeled offline cached data.
+**Deliverable:** Accessible installable dashboard and subject-detail views with theme support, target setting, historical cumulative snapshots, explicit connector guidance, and a clear unavailable state when attendance cannot be loaded.
 
 1. Scaffold React/Vite/TypeScript with component tests, linting, type checks, PWA manifest, icons, and service worker.
 2. Test-drive dashboard cards, shortage states, empty/loading/error states, and no-mobile-direct-sync behavior.
 3. Implement authenticated API client and protected app routes without placing session credentials in browser storage.
-4. Add runtime caching for latest authenticated attendance data and offline/saved-data indicators.
+4. Cache only the app shell and known legacy cache keys. Never cache authenticated API responses or attendance/authentication state; offline attendance must show the unavailable message.
 5. Add fixture-backed end-to-end flow; verify production build; update status and commit.
 
 ## Milestone 4 — Chrome connector
@@ -65,7 +65,7 @@ The next implementation gate is evidence, not a guessed adapter: complete the bo
 
 ## Milestone 5 — Release preparation and Render configuration
 
-**Deliverable:** Complete README, deployment checklist, `render.yaml`, production CORS/environment design, migration command, and pre-deploy verification record.
+**Deliverable:** Complete README, [staging verification checklist](STAGING_VERIFICATION_CHECKLIST.md), `render.yaml`, production CORS/environment design, migration command, and pre-deploy verification record.
 
 1. Confirm current official Render documentation, plans, database durability, costs, and limits before provisioning.
 2. Test the production configuration locally, build the frontend, and verify the API health and fixture ingestion/read flow.
