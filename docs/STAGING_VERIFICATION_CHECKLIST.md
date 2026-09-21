@@ -27,6 +27,18 @@ free-tier deployment has no worker: it uses
 - [ ] Confirm logs contain statuses and fixed error categories only. Do not
   enter a CampusWeb password into a shell, test fixture, issue, or chat.
 
+## Free-tier deployment checks
+
+- [ ] Source `main` is pushed to `Googieman/75percenters` without force-push; deployed commit is recorded.
+- [ ] Render creates exactly one free API and one temporary free PostgreSQL database; no worker or paid resource exists.
+- [ ] API startup runs `alembic upgrade head` before Uvicorn and connects through the normalized Psycopg URL.
+- [ ] Vercel installs with `npm --prefix frontend ci`, uses Node 24, and rewrites `/api/v1/*` to the actual Render hostname.
+- [ ] Staging login sets `Secure` session and CSRF cookies; a write without the CSRF header is rejected.
+- [ ] Dashboard load, logout, synthetic connector upload, subject history, and cross-user ownership checks pass over public HTTPS.
+- [ ] Opening and returning to the PWA coalesces refreshes, respects cooldowns, shows retry/reconnect states, and never polls a queued job without a worker.
+- [ ] Notifications remain unavailable in free on-demand staging.
+- [ ] `pg_dump` is restored into disposable PostgreSQL and history is verified before the database expiry date.
+
 ## Required CampusWeb checkpoint
 
 Record only `pass`/`fail`, UTC timestamps, duration ranges, and fixed error

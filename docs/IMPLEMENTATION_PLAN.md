@@ -81,3 +81,10 @@ The next implementation gate is authorized evidence for the implemented CampusWe
 2. Provision through Render’s secure workflow, run migrations, configure exact production origins, and deploy.
 3. Verify public PWA, API health, database connectivity, authentication, migrations, HTTPS cookies, CSRF, logout, and fixture-based ingestion/read flow.
 4. Record confirmed URLs, deployment state, package location, final test evidence, limitations, and remaining manual SRM test. Export the database before free-tier expiry.
+
+The code/configuration gate for this milestone is complete: staging cookies are
+`Secure`, application and Alembic URLs use Psycopg 3, Render migrations run
+from the startup command, Vercel uses the staging API hostname, the PWA refresh
+lifecycle is bounded for no-worker hosting, and on-demand staging does not
+advertise notifications. The external deployment and database bootstrap gates
+remain open.

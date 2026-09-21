@@ -4,7 +4,7 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 
 ## Current milestone
 
-**Free-tier staging preparation — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, worker-ready queue, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Free staging now uses an on-demand refresh when the PWA opens because it does not run a paid background worker. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
+**Free-tier staging deployment — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, worker-ready queue, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Free staging uses one bounded on-demand refresh when the PWA opens or returns to the foreground because it does not run a paid background worker. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
 
 ## Completed work
 
@@ -43,6 +43,9 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 - Added `scripts/bootstrap-dev.ps1` to create the pinned Python environment and install frontend/connector dependencies from their lockfiles.
 - Added `docs/STAGING_VERIFICATION_CHECKLIST.md` for the own-account checkpoint and seven-day Android pilot; it records only sanitized outcomes.
 - Updated the implementation plan and design record so offline behavior matches the shipped PWA: the app shell may be cached, while authenticated API responses and attendance state are not.
+- Secured both session and CSRF cookies in staging, normalized Render `postgres://`/`postgresql://` URLs to the installed Psycopg 3 driver for API and Alembic, and kept development cookies usable over HTTP.
+- Bounded free-tier PWA refresh recovery: open/focus requests coalesce, server cooldowns surface as retry states, terminal jobs render immediately, on-demand queued jobs do not poll without a worker, and on-demand deployments never advertise notifications.
+- Replaced the paid-only Render pre-deploy migration hook with migration-before-Uvicorn startup, set the staging Vercel rewrite to `srm-attendance-api-staging.onrender.com`, added the local staging policy verifier, and re-ran clean `npm ci` installs.
 
 ## Architecture decisions
 
@@ -56,7 +59,7 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 
 ## Remaining milestones
 
-1. Connect a private source repository and deploy the free staging API/PWA; fill the exact Vercel origin and record public URLs and live security checks.
+1. Publish this audited `main` branch to `Googieman/75percenters`, connect it to Render/Vercel, deploy the free staging API/PWA, fill the exact Vercel origin, and record public URLs and live security checks.
 2. Complete the authorized CampusWeb own-account checkpoint in controlled staging, including session restoration, three comparisons across two teaching days, natural expiry, and recovery.
 3. Run the Android pilot with the PWA open for free-tier on-demand refresh. Closed-app hourly refresh and worker restart recovery remain deferred until export to a worker-capable platform.
 4. Export to a durable worker-capable platform, configure backups, then run the regular-use release process.
@@ -90,7 +93,7 @@ Set-Location C:\Users\varug\Attendance-extractor
 .\scripts\bootstrap-dev.ps1
 ```
 
-Current verification: 95 backend tests, Ruff, mypy, and pip check pass; 14 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass. Deployment manifests parse and pass free-tier policy checks. These checks use sanitized fixtures and disposable PostgreSQL only; no public deployment has been verified yet.
+Current verification: 98 backend tests, Ruff, mypy, and pip check pass; 19 frontend tests, typecheck, lint, and production build pass after clean `npm ci`; 13 connector tests and staging-targeted build pass. `scripts/verify_staging_config.ps1` passes. These checks use sanitized fixtures and disposable PostgreSQL only; no public deployment has been verified yet.
 
 Task 5 local flow command:
 
@@ -146,7 +149,9 @@ docker compose stop postgres-test
 
 ## Deployment state
 
-Free-tier staging configuration is prepared but not provisioned. No Render resources, paid plans, GitHub remote, live URL, domains, or deployment secrets have been created. The free staging plan deliberately contains no Render worker.
+Free-tier staging configuration is corrected and audited but not provisioned. The current tracked tree excludes local profiles, secrets, build output, and the untracked `AGENTS.md`; history contains no high-confidence credential markers or raw portal data. No Render resources, paid plans, GitHub remote, live URL, domains, or deployment secrets have been created. The free staging plan deliberately contains no Render worker, so notifications remain unavailable even if VAPID values are present.
+
+The remaining external gates are interactive GitHub write authorization, Render/Vercel account authorization, secure provider secret entry, tracker bootstrap over the TLS database URL restricted to the operator IP, live HTTPS/security checks, and private dump/restore before the temporary database expires.
 
 ## Blockers and manual verification
 
