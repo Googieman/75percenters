@@ -1,10 +1,10 @@
 # SRM Attendance Tracker — Project Status
 
-Last updated: 2026-09-21 (Asia/Kolkata)
+Last updated: 2026-09-22 (Asia/Kolkata)
 
 ## Current milestone
 
-**CampusWeb phone-first acquisition — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, hourly durable worker, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
+**Free-tier staging preparation — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, worker-ready queue, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Free staging now uses an on-demand refresh when the PWA opens because it does not run a paid background worker. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
 
 ## Completed work
 
@@ -36,8 +36,10 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 - Added per-subscription VAPID Web Push delivery with stable data-free payloads, retry handling, 404/410 removal, deduped expiry episodes, and obsolete-notice cancellation.
 - Added `/api/v1/srm/connection`, `/api/v1/srm/auth-attempts`, `/api/v1/srm/sync`, `/api/v1/srm/sync-jobs`, disconnect, and Web Push subscription routes with session/CSRF/ownership controls.
 - Added phone-first PWA connection states, explicit hosted refresh, five-second job polling, Connect/Reconnect with password clearing, no attendance/authentication browser persistence, push reconnect handling, service-worker install assets, and target-setting reload behavior while retaining the optional legacy connector.
-- Added `render.yaml` for separate API/worker/PostgreSQL services and `vercel.json` for the same-origin API rewrite. No accounts, paid resources, domains, or secrets were provisioned.
+- Added a tested `on_demand` sync execution mode that reuses the fenced worker pass inside the API request, plus a one-time-on-dashboard-open free-tier refresh in the PWA. Worker mode remains available for export.
+- Added a free-tier `render.yaml` for the staging API and temporary PostgreSQL database, explicit dependency installation, Python 3.13 pinning, migration startup, Vercel install/build settings, and Node 24 pinning. No accounts, paid resources, domains, or secrets were provisioned.
 - Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the adapter is ready for sanitized verification but not enabled by default.
+- Added `docs/DEPLOYMENT.md` with the free-tier topology, secret-entry points, migration/rollback guidance, URL placeholders, and worker-platform export path.
 - Added `scripts/bootstrap-dev.ps1` to create the pinned Python environment and install frontend/connector dependencies from their lockfiles.
 - Added `docs/STAGING_VERIFICATION_CHECKLIST.md` for the own-account checkpoint and seven-day Android pilot; it records only sanitized outcomes.
 - Updated the implementation plan and design record so offline behavior matches the shipped PWA: the app shell may be cached, while authenticated API responses and attendance state are not.
@@ -54,9 +56,10 @@ Last updated: 2026-09-21 (Asia/Kolkata)
 
 ## Remaining milestones
 
-1. Complete the authorized CampusWeb own-account and hosted-runtime checkpoint, including restart restoration, three comparisons across two teaching days, natural expiry, and recovery.
-2. Enable the adapter only in staging after the checkpoint; configure VAPID keys and run the seven-day Android pilot with the PWA closed and worker restart recovery.
-3. Provision Render/Vercel production only after the user authorizes accounts, plans, source hosting, domains, and secrets.
+1. Connect a private source repository and deploy the free staging API/PWA; fill the exact Vercel origin and record public URLs and live security checks.
+2. Complete the authorized CampusWeb own-account checkpoint in controlled staging, including session restoration, three comparisons across two teaching days, natural expiry, and recovery.
+3. Run the Android pilot with the PWA open for free-tier on-demand refresh. Closed-app hourly refresh and worker restart recovery remain deferred until export to a worker-capable platform.
+4. Export to a durable worker-capable platform, configure backups, then run the regular-use release process.
 
 ## Exact commands to resume
 
@@ -87,7 +90,7 @@ Set-Location C:\Users\varug\Attendance-extractor
 .\scripts\bootstrap-dev.ps1
 ```
 
-Current verification on the phone-first branch: 92 backend tests, Ruff, mypy, and pip check pass; 13 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass. These checks use sanitized fixtures and disposable PostgreSQL only.
+Current verification: 95 backend tests, Ruff, mypy, and pip check pass; 14 frontend tests, typecheck, lint, and production build pass; 13 connector tests and build pass. Deployment manifests parse and pass free-tier policy checks. These checks use sanitized fixtures and disposable PostgreSQL only; no public deployment has been verified yet.
 
 Task 5 local flow command:
 
@@ -143,12 +146,12 @@ docker compose stop postgres-test
 
 ## Deployment state
 
-Configuration prepared but not provisioned. No Render resources, paid plans, GitHub remote, live URL, domains, or production secrets have been created.
+Free-tier staging configuration is prepared but not provisioned. No Render resources, paid plans, GitHub remote, live URL, domains, or deployment secrets have been created. The free staging plan deliberately contains no Render worker.
 
 ## Blockers and manual verification
 
 - The successful attendance HTML fixture is locally authored and sanitized to reflect the confirmed six-column contract; a real response must never be committed.
 - Live SRM syncing is verified for the normal authenticated Chrome flow. The user completed SRM login/CAPTCHA themselves; the connector was paired from the PWA, the actual Chrome Extensions toolbar popup collected from the report, the dashboard/history persisted the structured result, and an unchanged repeat remained idempotent. Same-origin non-report pages now fail closed. Do not use the legacy scraper or a Playwright-launched SRM login.
 - CampusWeb hosted acquisition is not yet feasible to claim: no legitimate own-account login/session-restoration/expiry/equivalence evidence or hosted-runtime result is recorded. Keep the hosted feature disabled and do not enter real SRM credentials into automated tests or chat.
-- The seven-day Android pilot, push delivery checkpoint, and worker restart recovery have not been run.
-- Production deployment will require Render account authorization, a durable PostgreSQL plan approved by the user, secure secret entry, and (if not already connected) source-host authorization.
+- The seven-day Android pilot, push delivery checkpoint, and worker restart recovery have not been run. The free-tier pilot must keep the PWA open for the on-demand refresh path.
+- Live deployment still requires private source-host authorization, Render/Vercel account connection, secure secret entry, and user-provided staging-origin confirmation. Free PostgreSQL is staging-only and must be exported before expiry; it is not the backup plan for regular use.

@@ -6,7 +6,9 @@ tokens, raw portal responses, student identifiers, or attendance totals.
 
 Keep `SRM_TRACKER_ACQUISITION_ENABLED=false` until every required checkpoint
 below is complete. Enable it only in an isolated staging deployment with the
-same encryption keyring and VAPID configuration on the API and worker.
+same encryption keyring and VAPID configuration on the API and worker. The
+free-tier deployment has no worker: it uses
+`SRM_TRACKER_SYNC_EXECUTION_MODE=on_demand` and refreshes when the PWA opens.
 
 ## Prepare the staging runtime
 
@@ -17,10 +19,11 @@ same encryption keyring and VAPID configuration on the API and worker.
 - [ ] Configure `SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS` as needed for a
   rotation test; do not retire a key while ciphertext still depends on it.
 - [ ] Configure the same VAPID public key, private key, and subject on the API
-  and worker.
+  and worker, or leave push disabled for the free-tier on-demand run.
 - [ ] Set `SRM_TRACKER_ACQUISITION_ENABLED=true` only for this staging run.
-- [ ] Start the API and the separate worker from the same release and verify
-  the health endpoint before attempting a connection.
+- [ ] For free staging, start the API and verify the health endpoint before
+  attempting a connection. For the later export, start the API and separate
+  worker from the same release.
 - [ ] Confirm logs contain statuses and fixed error categories only. Do not
   enter a CampusWeb password into a shell, test fixture, issue, or chat.
 
@@ -49,11 +52,14 @@ and correct the implementation or provider contract before retrying.
 ## Seven-day Android pilot
 
 Start only after the CampusWeb checkpoint passes. Keep the PWA closed for the
-scheduled refresh portions of the pilot.
+scheduled refresh portions only after exporting to a worker-capable platform.
+On the free tier, keep the PWA open for the on-demand refresh portions.
 
 - [ ] Install the staging PWA on one Android device.
-- [ ] Confirm an hourly refresh occurs while the PWA is closed.
-- [ ] Confirm a worker restart recovers leases and scheduled work.
+- [ ] Free tier: confirm one refresh starts when the PWA opens and completes
+  while the PWA remains open.
+- [ ] Worker-capable export: confirm an hourly refresh occurs while the PWA is
+  closed and a worker restart recovers leases and scheduled work.
 - [ ] Confirm a reauthentication notification uses the stable reconnect tag,
   contains no account or attendance identifiers, and opens the reconnect view.
 - [ ] Confirm a 404/410 push endpoint is removed and temporary delivery errors
@@ -71,6 +77,10 @@ scheduled refresh portions of the pilot.
 | Hosted restart and recovery |  |  |
 | Seven-day Android pilot |  |  |
 | Ready for production planning |  |  |
+
+Free-tier limitation: temporary PostgreSQL does not replace backups. Export a
+database dump before expiry or migration, and do not treat this staging mode as
+the regular-use release.
 
 Remove or redact any local notes containing sensitive values before committing
 or sharing results.

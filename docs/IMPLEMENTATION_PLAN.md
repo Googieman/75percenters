@@ -63,20 +63,21 @@ The next implementation gate is authorized evidence for the implemented CampusWe
 4. Build popup status/error UI and package ZIP.
 5. Perform the single manual live SRM verification described in the status file; update status and commit.
 
-## Milestone 5 — Release preparation and Render configuration
+## Milestone 5 — Free-tier staging preparation and Render configuration
 
-**Deliverable:** Complete README, [staging verification checklist](STAGING_VERIFICATION_CHECKLIST.md), `render.yaml`, production CORS/environment design, migration command, and pre-deploy verification record.
+**Deliverable:** Complete README, [staging verification checklist](STAGING_VERIFICATION_CHECKLIST.md), free-tier `render.yaml`, Vercel install/build settings, staging CORS/environment design, migration command, and pre-deploy verification record.
 
 1. Confirm current official Render documentation, plans, database durability, costs, and limits before provisioning.
-2. Test the production configuration locally, build the frontend, and verify the API health and fixture ingestion/read flow.
-3. Document local setup, extension loading/pairing, limitations, troubleshooting, and rollback/credential revocation.
-4. Update status and commit.
+2. For free staging, use the tested on-demand API execution path and one PWA refresh on dashboard open; reserve the durable worker for later export.
+3. Test the staging configuration locally, build the frontend, and verify the API health and fixture ingestion/read flow.
+4. Document local setup, extension loading/pairing, limitations, troubleshooting, rollback/credential revocation, and free-database export.
+5. Update status and commit.
 
 ## Milestone 6 — Authorized deployment and live verification
 
-**Deliverable:** A live PWA/API backed by durable PostgreSQL, or a precisely documented authorization/billing blocker.
+**Deliverable:** A live free staging PWA/API backed by temporary PostgreSQL, or a precisely documented authorization/source-host blocker. Regular use requires a later durable database and worker-capable export.
 
-1. Obtain only the required Render account, durable database plan, secrets, and source-host authorization from the user.
+1. Obtain only the required Render/Vercel account connection, private source-host authorization, staging secrets, and free-tier resource authorization from the user.
 2. Provision through Render’s secure workflow, run migrations, configure exact production origins, and deploy.
-3. Verify public PWA, API health, database connectivity, authentication, migrations, and fixture-based ingestion/read flow.
-4. Record confirmed URLs, deployment state, package location, final test evidence, limitations, and any remaining manual SRM test.
+3. Verify public PWA, API health, database connectivity, authentication, migrations, HTTPS cookies, CSRF, logout, and fixture-based ingestion/read flow.
+4. Record confirmed URLs, deployment state, package location, final test evidence, limitations, and remaining manual SRM test. Export the database before free-tier expiry.
