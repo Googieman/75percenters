@@ -77,7 +77,7 @@ def _set_session_cookie(response: Response, settings: Settings, token: str) -> N
         token,
         max_age=settings.session_ttl_days * 24 * 60 * 60,
         httponly=True,
-        secure=settings.environment == "production",
+        secure=settings.environment in {"staging", "production"},
         samesite="lax",
         path="/",
     )
@@ -89,7 +89,7 @@ def _set_csrf_cookie(response: Response, settings: Settings, token: str) -> None
         token,
         max_age=settings.session_ttl_days * 24 * 60 * 60,
         httponly=False,
-        secure=settings.environment == "production",
+        secure=settings.environment in {"staging", "production"},
         samesite="lax",
         path="/",
     )

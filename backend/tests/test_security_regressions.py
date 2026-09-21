@@ -45,6 +45,35 @@ def test_production_login_sets_secure_http_only_session_cookie(
     assert any("Secure" in cookie and "HttpOnly" in cookie for cookie in cookies)
 
 
+def test_staging_login_sets_secure_session_and_csrf_cookies(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        bootstrap_account(session, "owner@example.com", "a-very-long-password")
+
+    staging_settings = Settings(
+        environment="staging",
+        database_url="postgresql+psycopg://srm_tracker:srm_tracker@localhost:55432/srm_tracker_test",
+        frontend_origin="https://dashboard.example",
+        session_encryption_key="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    )
+    app_client.app = create_app(  # type: ignore[union-attr]
+        settings=staging_settings,
+        session_factory=database_session_factory,
+    )
+    response = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        "/api/v1/auth/login",
+        _base_url="https://testserver",
+        json={"email": "owner@example.com", "password": "a-very-long-password"},
+    )
+
+    cookies = response.headers.get_list("set-cookie")
+    assert len(cookies) == 2
+    assert all("Secure" in cookie for cookie in cookies)
+
+
 def test_production_redirects_http_requests_to_https(
     database_session_factory: object,
     app_client: object,

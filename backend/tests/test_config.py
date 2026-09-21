@@ -3,7 +3,23 @@ import base64
 import pytest
 from pydantic import ValidationError
 
+from srm_tracker import config
 from srm_tracker.config import Settings, get_settings
+
+normalize_database_url = getattr(config, "normalize_database_url", lambda value: value)
+
+
+def test_normalizes_render_postgres_urls() -> None:
+    assert (
+        normalize_database_url("postgres://user:pass@host/db?sslmode=require")
+        == "postgresql+psycopg://user:pass@host/db?sslmode=require"
+    )
+    assert normalize_database_url("postgresql://user:pass@host/db") == (
+        "postgresql+psycopg://user:pass@host/db"
+    )
+    assert normalize_database_url("postgresql+psycopg://user:pass@host/db") == (
+        "postgresql+psycopg://user:pass@host/db"
+    )
 
 
 def test_reads_development_settings() -> None:

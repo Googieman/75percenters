@@ -7,12 +7,13 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from srm_tracker import db_models  # noqa: F401  # Register model metadata.
+from srm_tracker.config import normalize_database_url
 from srm_tracker.db import Base
 
 config = context.config
 configured_database_url = os.getenv("SRM_TRACKER_DATABASE_URL")
 if configured_database_url:
-    config.set_main_option("sqlalchemy.url", configured_database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(configured_database_url))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 

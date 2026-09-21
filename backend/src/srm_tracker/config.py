@@ -12,6 +12,15 @@ Environment = Literal["development", "test", "staging", "production"]
 SyncExecutionMode = Literal["worker", "on_demand"]
 
 
+def normalize_database_url(value: str) -> str:
+    """Use the installed Psycopg 3 SQLAlchemy dialect for PostgreSQL URLs."""
+    if value.startswith("postgres://"):
+        return "postgresql+psycopg://" + value.removeprefix("postgres://")
+    if value.startswith("postgresql://"):
+        return "postgresql+psycopg://" + value.removeprefix("postgresql://")
+    return value
+
+
 class Settings(BaseSettings):
     """Validated runtime settings loaded from the SRM_TRACKER_ environment prefix."""
 
@@ -41,6 +50,11 @@ class Settings(BaseSettings):
     sync_minimum_interval_minutes: int = 5
     sync_hourly_interval_minutes: int = 60
     sync_execution_mode: SyncExecutionMode = "worker"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def use_psycopg_driver(cls, value: str) -> str:
+        return normalize_database_url(value)
 
     @field_validator("frontend_origin")
     @classmethod
