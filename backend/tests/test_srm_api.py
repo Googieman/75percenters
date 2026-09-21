@@ -136,6 +136,25 @@ def test_connection_status_is_safe_and_source_independent(
     assert "password" not in body
 
 
+def test_on_demand_staging_does_not_advertise_notifications(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        bootstrap_account(session, "owner@example.com", "a-very-long-password")
+    _login(app_client)
+    settings = app_client.app.state.settings  # type: ignore[union-attr]
+    settings.sync_execution_mode = "on_demand"
+    settings.web_push_public_key = "public"
+    settings.web_push_private_key = "private"
+    settings.web_push_subject = "mailto:admin@example.com"
+
+    response = app_client.request("GET", "/api/v1/srm/connection")  # type: ignore[union-attr]
+
+    assert response.status_code == 200
+    assert response.json()["notifications_available"] is False
+
+
 def test_authentication_attempts_are_feature_gated_before_accepting_credentials(
     database_session_factory: object,
     app_client: object,

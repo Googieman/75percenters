@@ -182,7 +182,8 @@ def connection_status(
             else connection.next_scheduled_refresh if connection is not None else None
         ),
         last_error_code=connection.last_error_code if connection is not None else None,
-        notifications_available=bool(
+        notifications_available=_settings(request).sync_execution_mode == "worker"
+        and bool(
             _settings(request).web_push_public_key
             and _settings(request).web_push_private_key
             and _settings(request).web_push_subject
