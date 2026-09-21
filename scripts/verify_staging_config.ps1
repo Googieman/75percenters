@@ -59,7 +59,7 @@ $highConfidenceSecretPatterns = @(
     '(?m)^\s*SRM_TRACKER_SESSION_ENCRYPTION_KEY\s*=\s*[^\s#]+\s*$'
 )
 foreach ($pattern in $highConfidenceSecretPatterns) {
-    $matches = @(git -C $repoRoot grep -n -I -E $pattern -- $tracked 2>$null)
+    $matches = @(git -C $repoRoot grep -n -I -E $pattern -- . ':!scripts/verify_staging_config.ps1' 2>$null)
     Require-Condition ($matches.Count -eq 0) "tracked files contain a high-confidence secret marker: $pattern"
 }
 
