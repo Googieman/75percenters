@@ -3,6 +3,7 @@
 from datetime import datetime
 from decimal import Decimal
 from ipaddress import ip_address
+from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import (
@@ -136,6 +137,7 @@ class SrmConnectionResponse(BaseModel):
     status: str
     provider: str | None
     provider_available: bool
+    sync_mode: Literal["worker", "on_demand"]
     netid_hint: str | None
     last_authenticated_at: datetime | None
     last_refreshed_at: datetime | None

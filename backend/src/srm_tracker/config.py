@@ -8,7 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from srm_tracker.acquisition_crypto import SessionCipher, SessionCipherError
 
-Environment = Literal["development", "test", "production"]
+Environment = Literal["development", "test", "staging", "production"]
+SyncExecutionMode = Literal["worker", "on_demand"]
 
 
 class Settings(BaseSettings):
@@ -39,14 +40,15 @@ class Settings(BaseSettings):
     sync_poll_interval_seconds: int = 30
     sync_minimum_interval_minutes: int = 5
     sync_hourly_interval_minutes: int = 60
+    sync_execution_mode: SyncExecutionMode = "worker"
 
     @field_validator("frontend_origin")
     @classmethod
     def production_origin_must_use_https(cls, value: str, info: ValidationInfo) -> str:
         """Disallow insecure browser origins in production."""
         environment = info.data.get("environment")
-        if environment == "production" and not value.startswith("https://"):
-            raise ValueError("Production frontend origin must use HTTPS")
+        if environment in {"staging", "production"} and not value.startswith("https://"):
+            raise ValueError("Hosted frontend origin must use HTTPS")
         return value.rstrip("/")
 
     @field_validator("session_ttl_days", "pairing_ttl_minutes", "rate_limit_window_seconds")
@@ -68,8 +70,8 @@ class Settings(BaseSettings):
     def production_requires_encryption_key(
         cls, value: str | None, info: ValidationInfo
     ) -> str | None:
-        if info.data.get("environment") == "production" and not value:
-            raise ValueError("Production requires a session encryption key")
+        if info.data.get("environment") in {"staging", "production"} and not value:
+            raise ValueError("Hosted environments require a session encryption key")
         if value:
             try:
                 SessionCipher.from_base64(value)

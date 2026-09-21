@@ -32,6 +32,7 @@ from srm_tracker.campusweb_provider import (
     ProviderContractChanged,
     ProviderTransientFailure,
 )
+from srm_tracker.campusweb_worker import CampusWebSyncExecutor
 from srm_tracker.config import Settings
 from srm_tracker.db import get_request_db
 from srm_tracker.db_models import AuthAttempt, PushSubscription, SyncJob
@@ -52,6 +53,7 @@ from srm_tracker.sync_jobs import (
     SyncTooSoonError,
     enqueue_sync_job,
 )
+from srm_tracker.worker import SyncWorker
 
 router = APIRouter(tags=["srm-acquisition"])
 
@@ -120,6 +122,29 @@ def _job_response(job: SyncJob) -> SyncJobResponse:
     )
 
 
+def _run_on_demand_sync(request: Request) -> None:
+    factory = request.app.state.session_factory
+    if factory is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Hosted refresh is unavailable",
+        )
+    keyring = _cipher(request)
+    worker = SyncWorker(
+        factory,
+        CampusWebSyncExecutor(factory, _provider(request), keyring),
+        scheduled_interval_minutes=_settings(request).sync_hourly_interval_minutes,
+        cipher=keyring,
+    )
+    try:
+        worker.run_once()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Hosted refresh is temporarily unavailable",
+        ) from None
+
+
 @router.get("/api/v1/srm/connection", response_model=SrmConnectionResponse)
 def connection_status(
     request: Request,
@@ -143,6 +168,7 @@ def connection_status(
             and getattr(getattr(request.app.state, "acquisition_provider", None), "name", None)
             == CAMPUSWEB_STUDENT_PORTAL
         ),
+        sync_mode=_settings(request).sync_execution_mode,
         netid_hint=netid_hint(connection.verified_netid) if connection is not None else None,
         last_authenticated_at=(
             connection.last_authenticated_at if connection is not None else None
@@ -340,6 +366,12 @@ def queue_sync(
             detail=str(error),
             headers={"Retry-After": str(error.retry_after)},
         ) from error
+    if _settings(request).sync_execution_mode == "on_demand":
+        # The worker uses a separate session and must not wait on the route
+        # session's implicit transaction while it claims the user row.
+        session.commit()
+        _run_on_demand_sync(request)
+        session.refresh(job)
     return _job_response(job)
 
 

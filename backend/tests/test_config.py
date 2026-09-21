@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 from pydantic import ValidationError
 
@@ -14,6 +16,24 @@ def test_reads_development_settings() -> None:
     assert settings.environment == "development"
     assert settings.database_url == "postgresql+psycopg://user:password@localhost:5432/srm_tracker"
     assert settings.frontend_origin == "http://localhost:5173"
+
+
+def test_supports_request_driven_sync_execution() -> None:
+    settings = Settings(sync_execution_mode="on_demand")
+
+    assert settings.sync_execution_mode == "on_demand"
+
+
+def test_hosted_staging_requires_https_and_encryption_key() -> None:
+    with pytest.raises(ValidationError, match="HTTPS"):
+        Settings(environment="staging", frontend_origin="http://localhost:5173")
+
+    settings = Settings(
+        environment="staging",
+        frontend_origin="https://staging.example.com",
+        session_encryption_key=base64.urlsafe_b64encode(bytes(range(32))).decode(),
+    )
+    assert settings.environment == "staging"
 
 
 def test_rejects_http_frontend_origin_in_production() -> None:

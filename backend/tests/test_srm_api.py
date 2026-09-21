@@ -4,7 +4,7 @@ from datetime import timedelta
 from srm_tracker.acquisition_provider import HostedSyncResult, ProviderChallenge, ProviderSession
 from srm_tracker.admin import bootstrap_account
 from srm_tracker.campusweb_provider import CAMPUSWEB_STUDENT_PORTAL
-from srm_tracker.db_models import SrmConnection, SyncJob
+from srm_tracker.db_models import SrmConnection, Subject, SyncJob
 from srm_tracker.schemas import AttendanceUpload, SubjectUpload
 from srm_tracker.time import utc_now
 
@@ -190,6 +190,42 @@ def test_manual_sync_is_queued_and_coalesced_for_connected_account(
     )
     assert job.status_code == 200
     assert job.json()["status"] == "queued"
+
+
+def test_on_demand_sync_completes_without_a_background_worker(
+    database_session_factory: object,
+    app_client: object,
+) -> None:
+    with database_session_factory() as session:  # type: ignore[operator]
+        bootstrap_account(session, "owner@example.com", "a-very-long-password")
+    _enable_provider(app_client)
+    app_client.app.state.settings.sync_execution_mode = "on_demand"  # type: ignore[union-attr]
+    csrf = _login(app_client)
+
+    started = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        "/api/v1/srm/auth-attempts",
+        headers={"X-CSRF-Token": csrf},
+        json={"netid": "AB1234"},
+    )
+    assert started.status_code == 201
+    completed = app_client.request(  # type: ignore[union-attr]
+        "POST",
+        f"/api/v1/srm/auth-attempts/{started.json()['attempt_id']}/complete",
+        headers={"X-CSRF-Token": csrf},
+        json={"password": "campus-password"},
+    )
+    assert completed.status_code == 200
+
+    refreshed = app_client.request(  # type: ignore[union-attr]
+        "POST", "/api/v1/srm/sync", headers={"X-CSRF-Token": csrf}
+    )
+
+    assert refreshed.status_code == 202
+    assert refreshed.json()["status"] == "succeeded"
+    with database_session_factory() as session:  # type: ignore[operator]
+        assert session.query(SyncJob).one().status == "succeeded"
+        assert session.query(Subject).one().code == "CSE1"
 
 
 def test_disconnect_cancels_jobs_and_removes_active_session_material(

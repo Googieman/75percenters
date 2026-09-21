@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import sessionmaker
 
 from srm_tracker.acquisition_crypto import SessionCipherError, SessionKeyring
-from srm_tracker.acquisition_provider import HostedSyncResult, ProviderSession
-from srm_tracker.campusweb_provider import (
-    CampusWebProvider,
+from srm_tracker.acquisition_provider import (
+    AcquisitionProvider,
+    HostedSyncResult,
+    ProviderSession,
 )
 from srm_tracker.campusweb_provider import (
     ProviderContractChanged as CampusContractChanged,
@@ -34,7 +35,7 @@ class CampusWebSyncExecutor:
     def __init__(
         self,
         session_factory: sessionmaker[DbSession],
-        provider: CampusWebProvider,
+        provider: AcquisitionProvider,
         keyring: SessionKeyring,
     ) -> None:
         self.session_factory = session_factory
