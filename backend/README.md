@@ -46,15 +46,29 @@ The migration test explicitly upgrades from empty, downgrades to `base`, and upg
 
 The server exposes safe connection status, durable refresh queueing, owned sync-job reads, disconnect, authentication attempts, and Web Push subscription endpoints under `/api/v1`. A separate worker claims PostgreSQL-backed jobs with leases and fencing generations, schedules connected accounts hourly, and dispatches VAPID notices. The fixed CampusWeb Student Portal adapter uses only the observed Student Portal routes and remains disabled by default with `SRM_TRACKER_ACQUISITION_ENABLED=false` until the evidence gates in `docs/PHONE_FIRST_ACQUISITION.md` pass.
 
-Production must provide `SRM_TRACKER_SESSION_ENCRYPTION_KEY` as a separately managed URL-safe base64 key containing 32 bytes. Optional retained read keys are supplied as a JSON object in `SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS`, for example `{"1":"<base64-key>"}`. Run `python scripts/rotate_session_keys.py` repeatedly until it prints `0` before retiring an old key. Keys encrypt provider session/challenge state with AES-GCM and are never stored in PostgreSQL.
+Hosted staging and production must provide `SRM_TRACKER_SESSION_ENCRYPTION_KEY` as a separately managed URL-safe base64 key containing 32 bytes. Optional retained read keys are supplied as a JSON object in `SRM_TRACKER_SESSION_ENCRYPTION_READ_KEYS`, for example `{"1":"<base64-key>"}`. Run `python scripts/rotate_session_keys.py` repeatedly until it prints `0` before retiring an old key. Keys encrypt provider session/challenge state with AES-GCM and are never stored in PostgreSQL.
 
-Start the hosted worker separately from the API after migrations:
+The free staging deployment does not run a separate worker. Set
+`SRM_TRACKER_SYNC_EXECUTION_MODE=on_demand`; the API runs one fenced refresh
+inside the refresh request, and the PWA requests that refresh once when the
+dashboard opens. This is intentionally a staging/free-tier mode: the API may
+cold-start and the PWA must remain open until the refresh finishes.
+
+For a deployment with a durable background worker, switch to
+`SRM_TRACKER_SYNC_EXECUTION_MODE=worker` and start the worker separately from
+the API after migrations:
 
 ```powershell
 .\.venv\Scripts\python.exe -m srm_tracker.worker_entrypoint
 ```
 
-The Render Blueprint at `../render.yaml` defines separate API and worker processes plus PostgreSQL. It contains no production secrets. Set the same active/read encryption keys and VAPID settings on both processes; keep acquisition disabled until the manual CampusWeb checkpoint and pilot are complete.
+The free staging Render Blueprint at `../render.yaml` defines one free API and
+temporary free PostgreSQL database. It contains no secrets and deliberately
+does not define a paid worker. The worker command and shared environment are
+kept here so the project can be exported to a worker-capable platform later.
+Keep acquisition disabled until the manual CampusWeb checkpoint and pilot are
+complete. The optional legacy Chrome connector remains available as a
+fallback.
 
 ## API security model
 
