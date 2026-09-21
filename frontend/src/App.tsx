@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { api, ApiError, Attendance, Connection, History, User } from "./api";
 import { formatGuidance, formatPercentage, formatSyncTime } from "./format";
@@ -79,6 +79,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [netid, setNetid] = useState("");
   const [srmPassword, setSrmPassword] = useState("");
   const [target, setTarget] = useState(String(user.attendance_target));
+  const automaticRefreshRequested = useRef(false);
 
   const loadData = useCallback(async () => {
     const [attendanceResult, connectionResult] = await Promise.allSettled([api.attendance(), api.connection()]);
@@ -99,6 +100,37 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     }
   }, [onLogout]);
 
+  const refresh = useCallback(async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const job = await api.queueSync();
+      if (job.status === "succeeded") {
+        setActiveJobId(null);
+        setMessage("Attendance refreshed.");
+        await loadData();
+        return;
+      }
+      if (["reauth_required", "paused", "failed", "canceled"].includes(job.status)) {
+        setActiveJobId(null);
+        setMessage("Attendance refresh could not complete.");
+        await loadData();
+        return;
+      }
+      setActiveJobId(job.job_id);
+      setConnection((current) => current ? { ...current, status: "refreshing", active_job_id: job.job_id } : current);
+      setMessage(
+        connection?.sync_mode === "on_demand"
+          ? "Refresh is running. Keep this app open while attendance updates."
+          : "Refresh queued. The hosted worker will update attendance in the background.",
+      );
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "Unable to queue refresh.");
+    } finally {
+      setBusy(false);
+    }
+  }, [connection?.sync_mode, loadData]);
+
   useEffect(() => {
     clearLegacyAttendanceStorage();
     void loadData();
@@ -111,6 +143,16 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
       window.removeEventListener("focus", retry);
     };
   }, [loadData]);
+
+  useEffect(() => {
+    if (
+      connection?.status !== "connected" ||
+      connection.sync_mode !== "on_demand" ||
+      automaticRefreshRequested.current
+    ) return;
+    automaticRefreshRequested.current = true;
+    void refresh();
+  }, [connection?.status, connection?.sync_mode, refresh]);
 
   useEffect(() => {
     if (activeJobId === null) return;
@@ -137,21 +179,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
       window.clearInterval(timer);
     };
   }, [activeJobId, loadData, onLogout]);
-
-  async function refresh() {
-    setBusy(true);
-    setMessage(null);
-    try {
-      const job = await api.queueSync();
-      setActiveJobId(job.job_id);
-      setConnection((current) => current ? { ...current, status: "refreshing", active_job_id: job.job_id } : current);
-      setMessage("Refresh queued. The hosted worker will update attendance in the background.");
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "Unable to queue refresh.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function reconnect(event: FormEvent) {
     event.preventDefault();
@@ -278,7 +305,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         <div>
           <p className="eyebrow">SRM connection</p>
           <h2>{connectionLabel}</h2>
-          <p className="muted">{connection?.netid_hint ? `Linked account ${connection.netid_hint}. ` : ""}Attendance refresh runs on the hosted worker; this PWA does not read an SRM tab.</p>
+          <p className="muted">{connection?.netid_hint ? `Linked account ${connection.netid_hint}. ` : ""}{connection?.sync_mode === "on_demand" ? "Attendance refresh runs when this app opens; keep it open while the refresh completes." : "Attendance refresh runs on the hosted worker; this PWA does not read an SRM tab."}</p>
         </div>
         <div className="button-row">
           {connection?.status === "connected" && <button onClick={() => void refresh()} disabled={busy}>Refresh now</button>}

@@ -84,6 +84,24 @@ describe("phone-first dashboard", () => {
     expect(await screen.findByText(/refresh queued/i)).toBeInTheDocument();
   });
 
+  it("refreshes attendance once when the free-tier dashboard opens", async () => {
+    apiMock.connection.mockResolvedValue({
+      status: "connected",
+      sync_mode: "on_demand",
+      provider: "student_portal",
+      netid_hint: "AB****4",
+      last_authenticated_at: null,
+      last_refreshed_at: null,
+      last_successful_sync: null,
+    });
+    apiMock.queueSync.mockResolvedValue({ job_id: 4, status: "succeeded" });
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Attendance refreshed.")).toBeInTheDocument();
+    expect(apiMock.syncJob).not.toHaveBeenCalled();
+  });
+
   it("does not show or persist attendance when the connection is unavailable", async () => {
     apiMock.attendance.mockRejectedValue(new Error("offline"));
     apiMock.connection.mockResolvedValue({

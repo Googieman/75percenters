@@ -35,6 +35,7 @@ export type HistoryItem = {
 export type History = { items: HistoryItem[]; next_cursor: string | null };
 export type Connection = {
   status: "disconnected" | "authenticating" | "connected" | "reauth_required" | "paused" | string;
+  sync_mode: "worker" | "on_demand";
   provider: string | null;
   provider_available: boolean;
   netid_hint: string | null;
