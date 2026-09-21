@@ -20,13 +20,14 @@ const apiMock = vi.hoisted(() => ({
 vi.mock("../src/api", () => ({
   api: apiMock,
   ApiError: class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(public status: number, message: string, public retryAfterSeconds: number | null = null) {
       super(message);
     }
   },
 }));
 
 import App from "../src/App";
+import { ApiError } from "../src/api";
 
 const user = { id: 7, email: "owner@example.com", attendance_target: 75 };
 const attendance = {
@@ -40,6 +41,25 @@ const attendance = {
   },
   last_successful_sync: null,
 };
+
+const connectedOnDemand = {
+  status: "connected",
+  sync_mode: "on_demand",
+  provider: "student_portal",
+  netid_hint: "AB****4",
+  last_authenticated_at: null,
+  last_refreshed_at: null,
+  last_successful_sync: null,
+  active_job_id: null,
+};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
 
 describe("phone-first dashboard", () => {
   beforeEach(() => {
@@ -85,21 +105,56 @@ describe("phone-first dashboard", () => {
   });
 
   it("refreshes attendance once when the free-tier dashboard opens", async () => {
-    apiMock.connection.mockResolvedValue({
-      status: "connected",
-      sync_mode: "on_demand",
-      provider: "student_portal",
-      netid_hint: "AB****4",
-      last_authenticated_at: null,
-      last_refreshed_at: null,
-      last_successful_sync: null,
-    });
+    apiMock.connection.mockResolvedValue(connectedOnDemand);
     apiMock.queueSync.mockResolvedValue({ job_id: 4, status: "succeeded" });
     render(<App />);
 
     await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("Attendance refreshed.")).toBeInTheDocument();
     expect(apiMock.syncJob).not.toHaveBeenCalled();
+  });
+
+  it("coalesces open and focus refreshes while a request is in flight", async () => {
+    const pending = deferred<{ job_id: number; status: string }>();
+    apiMock.connection.mockResolvedValue(connectedOnDemand);
+    apiMock.queueSync.mockReturnValue(pending.promise);
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
+    window.dispatchEvent(new Event("focus"));
+    await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
+
+    pending.resolve({ job_id: 9, status: "succeeded" });
+  });
+
+  it("does not poll a queued on-demand job when no worker is running", async () => {
+    apiMock.connection.mockResolvedValue(connectedOnDemand);
+    apiMock.queueSync.mockResolvedValue({ job_id: 9, status: "queued" });
+    render(<App />);
+
+    expect(await screen.findByText(/keep this app open/i)).toBeInTheDocument();
+    expect(apiMock.syncJob).not.toHaveBeenCalled();
+  });
+
+  it("shows the server cooldown after an automatic refresh is rejected", async () => {
+    apiMock.connection.mockResolvedValue(connectedOnDemand);
+    apiMock.queueSync.mockRejectedValue(new ApiError(429, "a refresh was completed too recently", 17));
+    render(<App />);
+
+    expect(await screen.findByText(/refresh is on cooldown/i)).toBeInTheDocument();
+  });
+
+  it("shows reconnect state after a terminal reauthentication result", async () => {
+    apiMock.connection.mockResolvedValueOnce(connectedOnDemand).mockResolvedValue({
+      ...connectedOnDemand,
+      status: "reauth_required",
+    });
+    apiMock.queueSync.mockResolvedValue({ job_id: 10, status: "reauth_required" });
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("button", { name: /reconnect srm/i })).toBeInTheDocument();
+    expect(await screen.findByText(/reconnect required before attendance/i)).toBeInTheDocument();
   });
 
   it("does not show or persist attendance when the connection is unavailable", async () => {

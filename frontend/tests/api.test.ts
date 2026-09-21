@@ -18,4 +18,18 @@ describe("phone acquisition API client", () => {
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
   });
+
+  it("preserves the server refresh cooldown on ApiError", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "a refresh was completed too recently" }), {
+        status: 429,
+        headers: { "Retry-After": "17" },
+      }),
+    );
+
+    await expect(api.queueSync()).rejects.toMatchObject({
+      status: 429,
+      retryAfterSeconds: 17,
+    });
+  });
 });

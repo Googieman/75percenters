@@ -65,7 +65,7 @@ export type AuthAttempt = {
 };
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public retryAfterSeconds: number | null = null) {
     super(message);
   }
 }
@@ -85,7 +85,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!response.ok) {
     const detail = typeof body === "object" && body && "detail" in body ? body.detail : "Request failed";
-    throw new ApiError(response.status, String(detail));
+    const retryAfter = response.headers.get("Retry-After");
+    const retryAfterSeconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) : null;
+    throw new ApiError(response.status, String(detail), retryAfterSeconds);
   }
   if (typeof body === "object" && body && "csrf_token" in body) {
     csrfToken = String(body.csrf_token);

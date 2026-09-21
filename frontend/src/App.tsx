@@ -7,6 +7,7 @@ import { requestAndRegisterPush } from "./push";
 import "./styles.css";
 
 const UNAVAILABLE_MESSAGE = "Connection unavailable. Reconnect to load attendance.";
+const DEFAULT_REFRESH_COOLDOWN_SECONDS = 300;
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -79,55 +80,103 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [netid, setNetid] = useState("");
   const [srmPassword, setSrmPassword] = useState("");
   const [target, setTarget] = useState(String(user.attendance_target));
-  const automaticRefreshRequested = useRef(false);
+  const loadDataInFlight = useRef<Promise<void> | null>(null);
+  const refreshInFlight = useRef<Promise<void> | null>(null);
+  const automaticRefreshCooldownUntil = useRef(0);
+  const initialRefreshStarted = useRef(false);
+  const lastReturnRefreshTrigger = useRef(0);
+  const [returnRefreshTrigger, setReturnRefreshTrigger] = useState(0);
 
   const loadData = useCallback(async () => {
-    const [attendanceResult, connectionResult] = await Promise.allSettled([api.attendance(), api.connection()]);
-    if (attendanceResult.status === "fulfilled") {
-      setAttendance(attendanceResult.value);
-      setUnavailable(false);
-    } else if (attendanceResult.reason instanceof ApiError && attendanceResult.reason.status === 401) {
-      onLogout();
+    if (loadDataInFlight.current) {
+      await loadDataInFlight.current;
       return;
-    } else {
-      setAttendance(null);
-      setUnavailable(true);
-      setMessage(UNAVAILABLE_MESSAGE);
     }
-    if (connectionResult.status === "fulfilled") {
-      setConnection(connectionResult.value);
-      setActiveJobId(connectionResult.value.active_job_id ?? null);
+    const request = (async () => {
+      const [attendanceResult, connectionResult] = await Promise.allSettled([api.attendance(), api.connection()]);
+      if (attendanceResult.status === "fulfilled") {
+        setAttendance(attendanceResult.value);
+        setUnavailable(false);
+      } else if (attendanceResult.reason instanceof ApiError && attendanceResult.reason.status === 401) {
+        onLogout();
+        return;
+      } else {
+        setAttendance(null);
+        setUnavailable(true);
+        setMessage(UNAVAILABLE_MESSAGE);
+      }
+      if (connectionResult.status === "fulfilled") {
+        setConnection(connectionResult.value);
+        setActiveJobId(connectionResult.value.active_job_id ?? null);
+      }
+    })();
+    loadDataInFlight.current = request;
+    try {
+      await request;
+    } finally {
+      if (loadDataInFlight.current === request) loadDataInFlight.current = null;
     }
   }, [onLogout]);
 
-  const refresh = useCallback(async () => {
-    setBusy(true);
-    setMessage(null);
+  const refresh = useCallback(async (automatic = false) => {
+    if (refreshInFlight.current) {
+      await refreshInFlight.current;
+      return;
+    }
+    if (automatic && Date.now() < automaticRefreshCooldownUntil.current) {
+      const remaining = Math.ceil((automaticRefreshCooldownUntil.current - Date.now()) / 1000);
+      setMessage(`Refresh is on cooldown. Try again in ${remaining} seconds.`);
+      return;
+    }
+
+    const request = (async () => {
+      setBusy(true);
+      setMessage(null);
+      try {
+        const job = await api.queueSync();
+        if (job.status === "succeeded") {
+          setActiveJobId(null);
+          setMessage("Attendance refreshed.");
+          await loadData();
+          return;
+        }
+        if (["reauth_required", "paused", "failed", "canceled"].includes(job.status)) {
+          setActiveJobId(null);
+          setMessage(
+            job.status === "reauth_required"
+              ? "Reconnect required before attendance can refresh."
+              : "Attendance refresh could not complete.",
+          );
+          await loadData();
+          return;
+        }
+        if (connection?.sync_mode === "on_demand") {
+          setActiveJobId(null);
+          setMessage("Refresh is still queued. Keep this app open and retry if attendance does not update.");
+          return;
+        }
+        setActiveJobId(job.job_id);
+        setConnection((current) => current ? { ...current, status: "refreshing", active_job_id: job.job_id } : current);
+        setMessage("Refresh queued. The hosted worker will update attendance in the background.");
+      } catch (reason) {
+        if (reason instanceof ApiError && reason.status === 429) {
+          const retryAfter = reason.retryAfterSeconds ?? DEFAULT_REFRESH_COOLDOWN_SECONDS;
+          automaticRefreshCooldownUntil.current = Date.now() + retryAfter * 1000;
+          setMessage(`Refresh is on cooldown. Try again in ${retryAfter} seconds.`);
+        } else if (reason instanceof ApiError && reason.status === 409) {
+          setMessage("Reconnect required before refreshing attendance.");
+        } else {
+          setMessage(reason instanceof Error ? reason.message : "Unable to queue refresh.");
+        }
+      } finally {
+        setBusy(false);
+      }
+    })();
+    refreshInFlight.current = request;
     try {
-      const job = await api.queueSync();
-      if (job.status === "succeeded") {
-        setActiveJobId(null);
-        setMessage("Attendance refreshed.");
-        await loadData();
-        return;
-      }
-      if (["reauth_required", "paused", "failed", "canceled"].includes(job.status)) {
-        setActiveJobId(null);
-        setMessage("Attendance refresh could not complete.");
-        await loadData();
-        return;
-      }
-      setActiveJobId(job.job_id);
-      setConnection((current) => current ? { ...current, status: "refreshing", active_job_id: job.job_id } : current);
-      setMessage(
-        connection?.sync_mode === "on_demand"
-          ? "Refresh is running. Keep this app open while attendance updates."
-          : "Refresh queued. The hosted worker will update attendance in the background.",
-      );
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "Unable to queue refresh.");
+      await request;
     } finally {
-      setBusy(false);
+      if (refreshInFlight.current === request) refreshInFlight.current = null;
     }
   }, [connection?.sync_mode, loadData]);
 
@@ -135,7 +184,9 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     clearLegacyAttendanceStorage();
     void loadData();
     if (new URLSearchParams(window.location.search).get("reconnect") === "1") setShowReconnect(true);
-    const retry = () => void loadData();
+    const retry = () => {
+      void loadData().then(() => setReturnRefreshTrigger((current) => current + 1));
+    };
     window.addEventListener("online", retry);
     window.addEventListener("focus", retry);
     return () => {
@@ -145,17 +196,17 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   }, [loadData]);
 
   useEffect(() => {
-    if (
-      connection?.status !== "connected" ||
-      connection.sync_mode !== "on_demand" ||
-      automaticRefreshRequested.current
-    ) return;
-    automaticRefreshRequested.current = true;
-    void refresh();
-  }, [connection?.status, connection?.sync_mode, refresh]);
+    if (connection?.status !== "connected" || connection.sync_mode !== "on_demand") return;
+    const initialRefresh = returnRefreshTrigger === 0 && !initialRefreshStarted.current;
+    const returnRefresh = returnRefreshTrigger > lastReturnRefreshTrigger.current;
+    if (!initialRefresh && !returnRefresh) return;
+    initialRefreshStarted.current = true;
+    if (returnRefresh) lastReturnRefreshTrigger.current = returnRefreshTrigger;
+    void refresh(true);
+  }, [connection?.status, connection?.sync_mode, refresh, returnRefreshTrigger]);
 
   useEffect(() => {
-    if (activeJobId === null) return;
+    if (activeJobId === null || connection?.sync_mode === "on_demand") return;
     let active = true;
     const poll = async () => {
       try {
@@ -178,7 +229,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
       active = false;
       window.clearInterval(timer);
     };
-  }, [activeJobId, loadData, onLogout]);
+  }, [activeJobId, connection?.sync_mode, loadData, onLogout]);
 
   async function reconnect(event: FormEvent) {
     event.preventDefault();
@@ -308,6 +359,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
           <p className="muted">{connection?.netid_hint ? `Linked account ${connection.netid_hint}. ` : ""}{connection?.sync_mode === "on_demand" ? "Attendance refresh runs when this app opens; keep it open while the refresh completes." : "Attendance refresh runs on the hosted worker; this PWA does not read an SRM tab."}</p>
         </div>
         <div className="button-row">
+          {unavailable && <button className="secondary" onClick={() => void loadData()}>Retry connection</button>}
           {connection?.status === "connected" && <button onClick={() => void refresh()} disabled={busy}>Refresh now</button>}
           {connection?.status !== "connected" && <button onClick={() => setShowReconnect(true)}>Reconnect SRM</button>}
           {connection?.status === "connected" && <button className="secondary" onClick={() => void disconnect()} disabled={busy}>Disconnect SRM</button>}
