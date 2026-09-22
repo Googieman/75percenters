@@ -2,12 +2,14 @@ const status = document.querySelector("#status");
 const pairing = document.querySelector("#pairing");
 const pairingCode = document.querySelector("#pairing-code");
 const pairButton = document.querySelector("#pair");
+const openCampusWebButton = document.querySelector("#open-campusweb");
 const syncButton = document.querySelector("#sync");
 const message = document.querySelector("#message");
 let syncInFlight = false;
 
 document.addEventListener("DOMContentLoaded", refreshStatus, { once: true });
 pairButton.addEventListener("click", pair);
+openCampusWebButton.addEventListener("click", openCampusWeb);
 syncButton.addEventListener("click", sync);
 
 async function refreshStatus() {
@@ -27,6 +29,22 @@ async function pair() {
   syncButton.disabled = false;
   status.textContent = "Connector paired.";
   showMessage("Paired successfully.");
+}
+
+async function openCampusWeb() {
+  openCampusWebButton.disabled = true;
+  try {
+    const result = await chrome.runtime.sendMessage({ type: "OPEN_CAMPUSWEB" });
+    showMessage(
+      result?.ok
+        ? "CampusWeb opened. Sign in there, then open the attendance report."
+        : "Unable to open CampusWeb.",
+    );
+  } catch {
+    showMessage("Unable to open CampusWeb.");
+  } finally {
+    openCampusWebButton.disabled = false;
+  }
 }
 
 async function sync() {

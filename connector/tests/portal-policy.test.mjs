@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { isAllowedPortalUrl } from "../src/portal-policy.mjs";
+import { CAMPUSWEB_LOGIN_URL, isAllowedPortalUrl } from "../src/portal-policy.mjs";
+
+test("defines the fixed CampusWeb login URL without allowing it as a report context", () => {
+  assert.equal(CAMPUSWEB_LOGIN_URL, "https://sp.srmist.edu.in/srmiststudentportal/");
+  assert.equal(isAllowedPortalUrl(CAMPUSWEB_LOGIN_URL), false);
+});
 
 test("allows the verified live portal report page", () => {
   assert.equal(

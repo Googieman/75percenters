@@ -1,3 +1,5 @@
+export const CAMPUSWEB_LOGIN_URL = "https://sp.srmist.edu.in/srmiststudentportal/";
+
 const PORTAL_PAGE_URLS = new Set([
   "https://sp.srmist.edu.in/srmiststudentportal/students/template/HRDSystem.jsp",
   "https://sp.srmist.edu.in/srmiststudentportal/students/report/studentAttendanceDetails.jsp",

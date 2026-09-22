@@ -3,12 +3,14 @@ import {
   isTrustedPopupSender,
   validateCollectorResult,
 } from "./message-policy.mjs";
-import { isAllowedPortalUrl } from "./portal-policy.mjs";
+import { CAMPUSWEB_LOGIN_URL, isAllowedPortalUrl } from "./portal-policy.mjs";
+import { getCampusWebOpenUrl } from "./worker-policy.mjs";
 
 const API_ORIGIN = "__SRM_TRACKER_API_ORIGIN__";
 const WORKER_ERROR_CODES = Object.freeze({
   API_FAILED: "API_FAILED",
   NOT_PAIRED: "NOT_PAIRED",
+  OPEN_FAILED: "OPEN_FAILED",
   PORTAL_TAB_INVALID: "PORTAL_TAB_INVALID",
   REVOKED: "REVOKED",
   UNKNOWN: "UNKNOWN",
@@ -23,6 +25,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || typeof message.type !== "string") {
     sendResponse({ ok: false, errorCode: WORKER_ERROR_CODES.UNKNOWN });
     return false;
+  }
+  if (getCampusWebOpenUrl(message) === CAMPUSWEB_LOGIN_URL) {
+    openCampusWeb().then(sendResponse);
+    return true;
   }
   if (message.type === "GET_STATUS") {
     chrome.storage.local.get(["device_id"]).then(({ device_id }) => {
@@ -42,6 +48,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ ok: false, errorCode: WORKER_ERROR_CODES.UNKNOWN });
   return false;
 });
+
+async function openCampusWeb() {
+  try {
+    await chrome.tabs.create({ url: CAMPUSWEB_LOGIN_URL });
+    return { ok: true };
+  } catch {
+    return { ok: false, errorCode: WORKER_ERROR_CODES.OPEN_FAILED };
+  }
+}
 
 async function pair(code) {
   if (typeof code !== "string" || !code.trim()) {
