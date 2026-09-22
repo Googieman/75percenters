@@ -3,8 +3,8 @@
 ## Task objective
 
 Document the approved local-only CampusWeb connector flow by updating the four
-deployment and verification documents, without changing the repository
-instructions or the implementation plan. The documentation must keep tracker authentication separate
+required deployment and verification documents. The repository instructions and
+approved implementation plan were not changed. The documentation must keep tracker authentication separate
 from CampusWeb authentication, keep hosted acquisition disabled, and preserve the
 existing staging deployment, backup, rollback, and expiry details.
 
