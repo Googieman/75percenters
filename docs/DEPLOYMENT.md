@@ -1,8 +1,9 @@
 # Staging deployment record
 
-This project is configured for a free-tier staging run. The deployment is
-deliberately provider-gated: `SRM_TRACKER_ACQUISITION_ENABLED=false` remains
-the default until the manual CampusWeb checkpoint passes.
+This project is configured for a free-tier staging run. The tracker account is
+separate from the CampusWeb account. Staging uses the local-only Chrome
+connector flow, and `SRM_TRACKER_ACQUISITION_ENABLED=false` remains set so
+CampusWeb credentials are never sent to the hosted API.
 
 ## Free-tier topology
 
@@ -77,15 +78,38 @@ After the first Vercel deployment, copy its actual origin into
 `SRM_TRACKER_FRONTEND_ORIGIN` and redeploy the API. On-demand staging never
 advertises Web Push notifications because no process dispatches them.
 
+## Local-only CampusWeb connector flow
+
+The tracker login is a separate account used only for the 75percenters
+dashboard. CampusWeb access happens in the operator's normal Chrome session:
+
+1. Sign in to the tracker and pair the Chrome connector from the dashboard.
+2. In the connector popup, select `Open CampusWeb`. It opens the fixed Student
+   Portal root: `https://sp.srmist.edu.in/srmiststudentportal/`.
+3. Enter CampusWeb credentials and complete any portal challenge only on that
+   Student Portal page.
+4. Navigate to the verified attendance report, then select `Sync attendance`
+   in the connector popup as an explicit user action.
+5. The connector validates the report and sends only structured subject
+   attendance to the authenticated tracker API.
+
+The connector does not read, export, persist, or transmit cookies or session
+tokens. It does not automate login. Hosted CampusWeb acquisition stays
+disabled in free staging, and notifications remain unavailable because no
+worker dispatches them.
+
 ## URLs and verification
 
 | Item | Result |
 | --- | --- |
-| Render API URL | Not provisioned |
-| Render health URL | Not provisioned |
-| Vercel PWA URL | Not provisioned |
-| HTTPS/cookie/CSRF check | Pending live deployment |
-| Synthetic attendance/history check | Passed locally; pending public URL |
+| Render API URL | https://srm-attendance-api-staging.onrender.com |
+| Render health URL | https://srm-attendance-api-staging.onrender.com/api/v1/health (200) |
+| Vercel PWA URL | https://75percenters.vercel.app |
+| Deployed commit | `2f19977aa26d7996f66669973d7c6a8a1216b559` |
+| Temporary database expiry | 2026-10-22 |
+| HTTPS/cookie/CSRF check | Public health passed; tracker bootstrap and auth checks pending |
+| Synthetic attendance/history check | Passed locally; public verification pending |
+| Database dump/restore | Pending before expiry |
 | CampusWeb acquisition | Disabled |
 
 The tracker account is created without Render shell access. After the database
@@ -106,10 +130,10 @@ Enter the tracker password only at the hidden interactive prompt. Do not save
 the external URL, password, encryption key, or dump path in the repository or
 chat.
 
-The public verification order is: health check, login, cookie and CSRF write,
-dashboard load, logout, synthetic ingestion/history, then only the authorized
-CampusWeb staging checkpoint. Do not enter CampusWeb credentials into a shell,
-repository, issue, or chat.
+The public verification order is: health check, tracker login, cookie and CSRF
+write, dashboard load, logout, synthetic ingestion/history, then the local-only
+Chrome connector checkpoint. Do not enter CampusWeb credentials into a shell,
+repository, issue, or chat; enter them only on the normal Student Portal page.
 
 ## Export to a worker-capable platform
 

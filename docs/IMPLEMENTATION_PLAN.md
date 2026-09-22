@@ -11,9 +11,9 @@ This plan is intentionally milestone-based so every session can end at a clean, 
 
 ## Phone-first redesign addendum — provider-gated
 
-The phone-first redesign in `docs/PHONE_FIRST_ACQUISITION.md` supersedes the assumption that the desktop connector is the production acquisition path. The existing connector remains an optional, verified fallback. The hosted foundation is implemented behind `SRM_TRACKER_ACQUISITION_ENABLED=false` by default.
+The phone-first redesign in `docs/PHONE_FIRST_ACQUISITION.md` supersedes the assumption that the desktop connector is the production acquisition path. For free staging, the approved path is local-only: tracker login is separate from CampusWeb login, `Open CampusWeb` opens the fixed Student Portal root in normal Chrome, the operator enters CampusWeb credentials only on that portal page, and an explicit connector `Sync` sends only validated structured attendance to the API. The hosted foundation remains behind `SRM_TRACKER_ACQUISITION_ENABLED=false`.
 
-The next implementation gate is authorized evidence for the implemented CampusWeb Student Portal adapter: complete the own-account login, restart restoration, attendance equivalence, expiry/recovery, and hosted-runtime checkpoint. Do not store SRM passwords, cookies, profiles, raw responses, CAPTCHA answers, OTPs, or browser fingerprint values. Do not claim hourly hosted refresh or Android reauthentication until the seven-day staging pilot proves it.
+The hosted CampusWeb adapter is a separate future review gate, not part of free staging. Do not store CampusWeb credentials, cookies, session tokens, profiles, raw responses, CAPTCHA answers, OTPs, or browser fingerprint values. Do not claim hourly hosted refresh or Android reauthentication until a worker-capable export and the seven-day staging pilot prove it.
 
 ## Milestone 0 — Repository control plane
 
@@ -55,7 +55,7 @@ The next implementation gate is authorized evidence for the implemented CampusWe
 
 ## Milestone 4 — Chrome connector
 
-**Deliverable:** A packaged Manifest V3 extension with minimal fixed host permissions, polished popup, explicit pairing confirmation, user-triggered SRM request, validated portal response, and revocation/error states.
+**Deliverable:** A packaged Manifest V3 extension with minimal fixed host permissions, polished popup, explicit pairing confirmation, user-triggered same-origin SRM request from the operator's normal authenticated Chrome session, validated portal response, and revocation/error states.
 
 1. Test parser boundary and extension data validation with fixtures; keep all request code packaged with the extension.
 2. Implement main-world, same-origin request execution only after a popup Sync action. Obtain a CSRF value from the page only if legitimately present and needed.
@@ -70,7 +70,7 @@ The next implementation gate is authorized evidence for the implemented CampusWe
 1. Confirm current official Render documentation, plans, database durability, costs, and limits before provisioning.
 2. For free staging, use the tested on-demand API execution path and one PWA refresh on dashboard open; reserve the durable worker for later export.
 3. Test the staging configuration locally, build the frontend, and verify the API health and fixture ingestion/read flow.
-4. Document local setup, extension loading/pairing, limitations, troubleshooting, rollback/credential revocation, and free-database export.
+4. Document local setup, extension loading/pairing, the fixed `Open CampusWeb` flow, the separate tracker login, limitations, troubleshooting, rollback/credential revocation, and free-database export.
 5. Update status and commit.
 
 ## Milestone 6 — Authorized deployment and live verification
@@ -79,12 +79,13 @@ The next implementation gate is authorized evidence for the implemented CampusWe
 
 1. Obtain only the required Render/Vercel account connection, private source-host authorization, staging secrets, and free-tier resource authorization from the user.
 2. Provision through Render’s secure workflow, run migrations, configure exact production origins, and deploy.
-3. Verify public PWA, API health, database connectivity, authentication, migrations, HTTPS cookies, CSRF, logout, and fixture-based ingestion/read flow.
-4. Record confirmed URLs, deployment state, package location, final test evidence, limitations, and remaining manual SRM test. Export the database before free-tier expiry.
+3. Verify public PWA, API health, database connectivity, authentication, migrations, HTTPS cookies, CSRF, logout, fixture-based ingestion/read flow, and the local-only Chrome connector boundary while hosted acquisition remains disabled.
+4. Record confirmed URLs, deployment state, package location, final test evidence, limitations, and the remaining manual connector test. Export the database before free-tier expiry.
 
 The code/configuration gate for this milestone is complete: staging cookies are
 `Secure`, application and Alembic URLs use Psycopg 3, Render migrations run
 from the startup command, Vercel uses the staging API hostname, the PWA refresh
 lifecycle is bounded for no-worker hosting, and on-demand staging does not
-advertise notifications. The external deployment and database bootstrap gates
-remain open.
+advertise notifications. The free staging deployment is live; database
+bootstrap, public security checks, local connector verification, and the private
+dump/restore gate remain open.

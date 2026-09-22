@@ -4,7 +4,7 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 
 ## Current milestone
 
-**Free-tier staging deployment — provider-gated.** The existing authenticated Chrome fallback remains verified. The CampusWeb Student Portal adapter, encrypted server-side sessions, worker-ready queue, push delivery, auth-attempt flow, and no-offline PWA behavior are implemented. Free staging uses one bounded on-demand refresh when the PWA opens or returns to the foreground because it does not run a paid background worker. Acquisition remains disabled pending authorized own-account and hosted-runtime evidence.
+**Free-tier staging deployment — local-only CampusWeb flow.** The tracker account is separate from CampusWeb. The Chrome connector opens the fixed Student Portal root, the operator signs in there in normal Chrome, and an explicit Sync sends only validated structured attendance to the API. Free staging uses one bounded on-demand refresh when the PWA opens or returns to the foreground because it does not run a paid background worker. Hosted CampusWeb acquisition remains disabled.
 
 ## Completed work
 
@@ -31,15 +31,15 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 - Added the verified Python `Att. hours` parser alias and migration `0002_hosted_acquisition` for SRM connections, expiring auth attempts, leased/fenced sync jobs, push subscriptions, notification outbox, and source-independent sync freshness.
 - Extracted source-independent transactional ingestion with connection-generation and job-fence checks; connector uploads still require a live non-revoked connector device.
 - Added AES-GCM server-side session/challenge-state encryption with owner/provider/generation/attempt binding, active/read keyrings, resumable rotation, retirement checks, and production key validation. No SRM password, OTP, cookie, token, or raw portal response is persisted.
-- Added the fixed-destination CampusWeb Student Portal provider. It forwards credentials only during explicit Connect/Reconnect, excludes Academia, validates identity/semester/attendance contracts, preserves rotated cookies, bounds requests/responses, and remains behind the disabled acquisition flag.
+- Retained the fixed-destination CampusWeb provider behind the disabled acquisition flag for separate review; free staging does not use it. The approved staging path is the local-only Chrome connector and normal Student Portal session.
 - Added durable worker scheduling every 30 seconds with hourly connected-account jobs, immediate post-connect refresh, coalescing, fenced success/retry/reauth/source-change handling, bounded Retry-After retries, lease recovery, and expired challenge cleanup.
 - Added per-subscription VAPID Web Push delivery with stable data-free payloads, retry handling, 404/410 removal, deduped expiry episodes, and obsolete-notice cancellation.
 - Added `/api/v1/srm/connection`, `/api/v1/srm/auth-attempts`, `/api/v1/srm/sync`, `/api/v1/srm/sync-jobs`, disconnect, and Web Push subscription routes with session/CSRF/ownership controls.
-- Added phone-first PWA connection states, explicit hosted refresh, five-second job polling, Connect/Reconnect with password clearing, no attendance/authentication browser persistence, push reconnect handling, service-worker install assets, and target-setting reload behavior while retaining the optional legacy connector.
+- Added phone-first PWA connection states, explicit connector guidance, no attendance/authentication browser persistence, service-worker install assets, and target-setting reload behavior. The PWA no longer collects CampusWeb credentials.
 - Added a tested `on_demand` sync execution mode that reuses the fenced worker pass inside the API request, plus a one-time-on-dashboard-open free-tier refresh in the PWA. Worker mode remains available for export.
-- Added a free-tier `render.yaml` for the staging API and temporary PostgreSQL database, explicit dependency installation, Python 3.13 pinning, migration startup, Vercel install/build settings, and Node 24 pinning. No accounts, paid resources, domains, or secrets were provisioned.
+- Added a free-tier `render.yaml` for the staging API and temporary PostgreSQL database, explicit dependency installation, Python 3.13 pinning, migration startup, Vercel install/build settings, and Node 24 pinning. The free API and PWA are deployed without paid resources or a worker.
 - Added the provider-gate record at `docs/PHONE_FIRST_ACQUISITION.md`; the adapter is ready for sanitized verification but not enabled by default.
-- Added `docs/DEPLOYMENT.md` with the free-tier topology, secret-entry points, migration/rollback guidance, URL placeholders, and worker-platform export path.
+- Added `docs/DEPLOYMENT.md` with the free-tier topology, local-only CampusWeb connector flow, secret-entry points, migration/rollback guidance, live URLs, and worker-platform export path.
 - Added `scripts/bootstrap-dev.ps1` to create the pinned Python environment and install frontend/connector dependencies from their lockfiles.
 - Added `docs/STAGING_VERIFICATION_CHECKLIST.md` for the own-account checkpoint and seven-day Android pilot; it records only sanitized outcomes.
 - Updated the implementation plan and design record so offline behavior matches the shipped PWA: the app shell may be cached, while authenticated API responses and attendance state are not.
@@ -59,8 +59,8 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 
 ## Remaining milestones
 
-1. Publish this audited `main` branch to `Googieman/75percenters`, connect it to Render/Vercel, deploy the free staging API/PWA, fill the exact Vercel origin, and record public URLs and live security checks.
-2. Complete the authorized CampusWeb own-account checkpoint in controlled staging, including session restoration, three comparisons across two teaching days, natural expiry, and recovery.
+1. Complete the tracker bootstrap, public HTTPS/security checks, synthetic ingestion/history checks, and private database dump/restore for the deployed free staging API/PWA.
+2. Complete the local-only Chrome connector checkpoint: use the separate tracker login, open CampusWeb from the connector, enter credentials only on the normal Student Portal page, and explicitly sync validated attendance. Keep hosted acquisition disabled.
 3. Run the Android pilot with the PWA open for free-tier on-demand refresh. Closed-app hourly refresh and worker restart recovery remain deferred until export to a worker-capable platform.
 4. Export to a durable worker-capable platform, configure backups, then run the regular-use release process.
 
@@ -93,7 +93,7 @@ Set-Location C:\Users\varug\Attendance-extractor
 .\scripts\bootstrap-dev.ps1
 ```
 
-Current verification: 98 backend tests, Ruff, mypy, and pip check pass; 19 frontend tests, typecheck, lint, and production build pass after clean `npm ci`; 13 connector tests and staging-targeted build pass. `scripts/verify_staging_config.ps1` passes. These checks use sanitized fixtures and disposable PostgreSQL only; no public deployment has been verified yet.
+Current verification: 98 backend tests, Ruff, mypy, and pip check pass; 19 frontend tests, typecheck, lint, and production build pass after clean `npm ci`; 19 connector tests and staging-targeted build pass. `scripts/verify_staging_config.ps1` passes. These automated checks use sanitized fixtures and disposable PostgreSQL; public health is recorded for the deployed staging URLs, while tracker bootstrap, live security, and connector checks remain pending.
 
 Task 5 local flow command:
 
@@ -149,9 +149,9 @@ docker compose stop postgres-test
 
 ## Deployment state
 
-Free-tier staging configuration is corrected and audited but not provisioned. The current tracked tree excludes local profiles, secrets, build output, and the untracked `AGENTS.md`; history contains no high-confidence credential markers or raw portal data. No Render resources, paid plans, GitHub remote, live URL, domains, or deployment secrets have been created. The free staging plan deliberately contains no Render worker, so notifications remain unavailable even if VAPID values are present.
+Free-tier staging configuration is corrected and audited. The API is deployed at `https://srm-attendance-api-staging.onrender.com` and the PWA at `https://75percenters.vercel.app`, from deployed commit `2f19977aa26d7996f66669973d7c6a8a1216b559`; the temporary Render PostgreSQL database expires on 2026-10-22. The current tracked tree excludes local profiles, secrets, build output, and the untracked `AGENTS.md`; history contains no high-confidence credential markers or raw portal data. No paid plan or Render worker exists, so notifications remain unavailable.
 
-The remaining external gates are interactive GitHub write authorization, Render/Vercel account authorization, secure provider secret entry, tracker bootstrap over the TLS database URL restricted to the operator IP, live HTTPS/security checks, and private dump/restore before the temporary database expires.
+The remaining external gates are tracker bootstrap over the TLS database URL restricted to the operator IP, live HTTPS/security checks, the local-only Chrome connector checkpoint, and private dump/restore before the temporary database expires.
 
 ## Blockers and manual verification
 
@@ -159,4 +159,4 @@ The remaining external gates are interactive GitHub write authorization, Render/
 - Live SRM syncing is verified for the normal authenticated Chrome flow. The user completed SRM login/CAPTCHA themselves; the connector was paired from the PWA, the actual Chrome Extensions toolbar popup collected from the report, the dashboard/history persisted the structured result, and an unchanged repeat remained idempotent. Same-origin non-report pages now fail closed. Do not use the legacy scraper or a Playwright-launched SRM login.
 - CampusWeb hosted acquisition is not yet feasible to claim: no legitimate own-account login/session-restoration/expiry/equivalence evidence or hosted-runtime result is recorded. Keep the hosted feature disabled and do not enter real SRM credentials into automated tests or chat.
 - The seven-day Android pilot, push delivery checkpoint, and worker restart recovery have not been run. The free-tier pilot must keep the PWA open for the on-demand refresh path.
-- Live deployment still requires private source-host authorization, Render/Vercel account connection, secure secret entry, and user-provided staging-origin confirmation. Free PostgreSQL is staging-only and must be exported before expiry; it is not the backup plan for regular use.
+- Live deployment is recorded above. Tracker bootstrap, live security checks, the local-only Chrome connector checkpoint, and private dump/restore remain. Free PostgreSQL is staging-only and must be exported before expiry; it is not the backup plan for regular use.
