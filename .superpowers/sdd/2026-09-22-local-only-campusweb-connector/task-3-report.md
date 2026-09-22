@@ -2,9 +2,9 @@
 
 ## Task objective
 
-Document the approved local-only CampusWeb connector flow without changing the
-four deployment and verification documents, the repository instructions, or the
-implementation plan. The documentation must keep tracker authentication separate
+Document the approved local-only CampusWeb connector flow by updating the four
+deployment and verification documents, without changing the repository
+instructions or the implementation plan. The documentation must keep tracker authentication separate
 from CampusWeb authentication, keep hosted acquisition disabled, and preserve the
 existing staging deployment, backup, rollback, and expiry details.
 
@@ -12,6 +12,10 @@ existing staging deployment, backup, rollback, and expiry details.
 
 - Commit: `37603c06fcd8200f024ab11a5e40be9a7bd8a95d`
 - Commit subject: `docs: document local-only CampusWeb connector`
+- History-label note: the requested plan subject was `docs: record local-only
+  CampusWeb staging flow`, while the actual docs commit subject is `docs:
+  document local-only CampusWeb connector`; this is a non-functional
+  history-label deviation.
 - Files changed:
   - `docs/DEPLOYMENT.md`
   - `docs/STAGING_VERIFICATION_CHECKLIST.md`
