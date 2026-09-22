@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiMock = vi.hoisted(() => ({
@@ -13,8 +13,6 @@ const apiMock = vi.hoisted(() => ({
   updateSettings: vi.fn(),
   disconnectSrm: vi.fn(),
   registerPush: vi.fn(),
-  startAuth: vi.fn(),
-  completeAuth: vi.fn(),
 }));
 
 vi.mock("../src/api", () => ({
@@ -77,12 +75,24 @@ describe("phone-first dashboard", () => {
     });
   });
 
-  it("shows reconnect required without exposing portal credentials", async () => {
+  it("guides disconnected accounts to the connector without exposing portal credentials", async () => {
+    apiMock.connection.mockResolvedValue({
+      status: "disconnected",
+      provider: null,
+      netid_hint: null,
+      last_authenticated_at: null,
+      last_refreshed_at: null,
+      last_successful_sync: null,
+    });
     render(<App />);
 
-    expect(await screen.findByText("Reconnect required")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /reconnect srm/i })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/srm password/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Disconnected")).toBeInTheDocument();
+    expect(screen.getByText(/open campusweb in the chrome connector/i)).toBeInTheDocument();
+    expect(screen.getByTestId("generate-pairing")).toBeInTheDocument();
+    expect(screen.queryByLabelText("CampusWeb password")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("CampusWeb NetID")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect securely/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reconnect srm/i })).not.toBeInTheDocument();
   });
 
   it("queues a hosted refresh from an explicit phone action", async () => {
@@ -153,8 +163,14 @@ describe("phone-first dashboard", () => {
     render(<App />);
 
     await waitFor(() => expect(apiMock.queueSync).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole("button", { name: /reconnect srm/i })).toBeInTheDocument();
+    expect(await screen.findByText("Reconnect required")).toBeInTheDocument();
     expect(await screen.findByText(/reconnect required before attendance/i)).toBeInTheDocument();
+    expect(screen.getByText(/open campusweb in the chrome connector/i)).toBeInTheDocument();
+    expect(screen.getByTestId("generate-pairing")).toBeInTheDocument();
+    expect(screen.queryByLabelText("CampusWeb password")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("CampusWeb NetID")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect securely/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reconnect srm/i })).not.toBeInTheDocument();
   });
 
   it("does not show or persist attendance when the connection is unavailable", async () => {
@@ -174,33 +190,13 @@ describe("phone-first dashboard", () => {
     expect(localStorage.length).toBe(0);
   });
 
-  it("forwards CampusWeb credentials only during reconnect and clears the password", async () => {
-    apiMock.startAuth.mockResolvedValue({
-      attempt_id: 8,
-      status: "pending",
-      challenge_type: "password",
-      message: "Enter your password",
-      expires_at: "2026-09-21T00:10:00Z",
-    });
-    apiMock.completeAuth.mockResolvedValue({
-      attempt_id: 8,
-      status: "succeeded",
-      challenge_type: null,
-      message: "CampusWeb connected",
-      expires_at: "2026-09-21T00:10:00Z",
-    });
+  it("does not render a hosted CampusWeb credential form", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /reconnect srm/i }));
-    fireEvent.change(screen.getByLabelText("CampusWeb password"), {
-      target: { value: "secret" },
-    });
-    fireEvent.change(screen.getByLabelText("CampusWeb NetID"), {
-      target: { value: "AB1234" },
-    });
-    fireEvent.submit(screen.getByRole("button", { name: /connect securely/i }));
-
-    await waitFor(() => expect(apiMock.completeAuth).toHaveBeenCalledWith(8, "secret"));
+    expect(await screen.findByText("Reconnect required")).toBeInTheDocument();
     expect(screen.queryByLabelText("CampusWeb password")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("CampusWeb NetID")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect securely/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reconnect srm/i })).not.toBeInTheDocument();
   });
 });

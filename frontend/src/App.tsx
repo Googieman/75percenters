@@ -55,7 +55,7 @@ function Login({ onLogin, error }: { onLogin: (user: User) => void; error: strin
       <section className="panel">
         <p className="eyebrow">SRM Attendance Tracker</p>
         <h1>Sign in to your dashboard</h1>
-        <p className="muted">SRM credentials are used only during an explicit CampusWeb connection. The tracker never stores this password.</p>
+        <p className="muted">Use your tracker account to sign in. Attendance is collected separately by the Chrome connector.</p>
         <form onSubmit={submit} className="stack">
           <label>Email<input data-testid="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
           <label>Password<input data-testid="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
@@ -76,9 +76,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [history, setHistory] = useState<Record<number, History>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showReconnect, setShowReconnect] = useState(false);
-  const [netid, setNetid] = useState("");
-  const [srmPassword, setSrmPassword] = useState("");
   const [target, setTarget] = useState(String(user.attendance_target));
   const loadDataInFlight = useRef<Promise<void> | null>(null);
   const refreshInFlight = useRef<Promise<void> | null>(null);
@@ -183,7 +180,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   useEffect(() => {
     clearLegacyAttendanceStorage();
     void loadData();
-    if (new URLSearchParams(window.location.search).get("reconnect") === "1") setShowReconnect(true);
     const retry = () => {
       void loadData().then(() => setReturnRefreshTrigger((current) => current + 1));
     };
@@ -231,25 +227,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     };
   }, [activeJobId, connection?.sync_mode, loadData, onLogout]);
 
-  async function reconnect(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage(null);
-    try {
-      const attempt = await api.startAuth(netid);
-      await api.completeAuth(attempt.attempt_id, srmPassword);
-      setShowReconnect(false);
-      setNetid("");
-      setMessage("CampusWeb connected. Your first refresh is queued.");
-      await loadData();
-    } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "Unable to connect CampusWeb.");
-    } finally {
-      setSrmPassword("");
-      setBusy(false);
-    }
-  }
-
   async function disconnect() {
     setBusy(true);
     try {
@@ -293,7 +270,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   async function generatePairingCode() {
     try {
       setPairingCode((await api.createPairingCode()).code);
-      setMessage("Copy this code into the optional legacy Chrome connector popup.");
+      setMessage("Copy this code into the Chrome connector popup.");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "Unable to create a pairing code.");
     }
@@ -356,31 +333,21 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
         <div>
           <p className="eyebrow">SRM connection</p>
           <h2>{connectionLabel}</h2>
-          <p className="muted">{connection?.netid_hint ? `Linked account ${connection.netid_hint}. ` : ""}{connection?.sync_mode === "on_demand" ? "Attendance refresh runs when this app opens; keep it open while the refresh completes." : "Attendance refresh runs on the hosted worker; this PWA does not read an SRM tab."}</p>
+          <p className="muted">{connection?.status === "connected" ? `${connection.netid_hint ? `Linked account ${connection.netid_hint}. ` : ""}${connection.sync_mode === "on_demand" ? "Attendance refresh runs when this app opens; keep it open while the refresh completes." : "Attendance refresh runs on the hosted worker; this PWA does not read an SRM tab."}` : "Open CampusWeb in the Chrome connector, sign in on the portal, open the attendance report, then press Sync attendance."}</p>
         </div>
         <div className="button-row">
           {unavailable && <button className="secondary" onClick={() => void loadData()}>Retry connection</button>}
           {connection?.status === "connected" && <button onClick={() => void refresh()} disabled={busy}>Refresh now</button>}
-          {connection?.status !== "connected" && <button onClick={() => setShowReconnect(true)}>Reconnect SRM</button>}
           {connection?.status === "connected" && <button className="secondary" onClick={() => void disconnect()} disabled={busy}>Disconnect SRM</button>}
           <button className="secondary" onClick={() => void enableNotifications()} disabled={!connection?.notifications_available}>Enable notifications</button>
         </div>
       </section>
-      {showReconnect && <section className="panel" aria-label="CampusWeb connection form">
-        <h2>Connect to CampusWeb</h2>
-        <p className="muted">Your credentials are forwarded to CampusWeb only for this request. The tracker does not retain your password.</p>
-        <form className="stack" onSubmit={(event) => void reconnect(event)}>
-          <label>CampusWeb NetID<input value={netid} onChange={(event) => setNetid(event.target.value)} autoComplete="username" required /></label>
-          <label>CampusWeb password<input aria-label="CampusWeb password" type="password" value={srmPassword} onChange={(event) => setSrmPassword(event.target.value)} autoComplete="current-password" required /></label>
-          <button disabled={busy}>{busy ? "Connecting…" : "Connect securely"}</button>
-        </form>
-      </section>}
       <section className="toolbar panel">
         <div><strong>Attendance target</strong><p className="muted">Guidance uses this target without changing stored history.</p></div>
         <form className="inline-form" onSubmit={(event) => void saveTarget(event)}><label htmlFor="target">Target %</label><input id="target" type="number" min="1" max="100" step="0.01" value={target} onChange={(event) => setTarget(event.target.value)} /><button>Save</button></form>
       </section>
       <section className="toolbar panel">
-        <div><strong>Optional legacy Chrome connector</strong><p className="muted">Use only if hosted acquisition is unavailable; it still requires a normal authenticated Chrome session.</p></div>
+        <div><strong>Chrome connector</strong><p className="muted">Pair the connector with this tracker, then use it to open CampusWeb and sync attendance from your authenticated browser tab.</p></div>
         <button onClick={() => void generatePairingCode()} data-testid="generate-pairing">Generate pairing code</button>
         {pairingCode && <code data-testid="pairing-code" className="pairing-code">{pairingCode}</code>}
       </section>
