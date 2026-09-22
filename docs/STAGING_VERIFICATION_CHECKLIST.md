@@ -30,7 +30,9 @@ deployment has no worker: it uses
 
 ## Free-tier deployment checks
 
-- [ ] Source `main` is pushed to `Googieman/75percenters` without force-push; deployed commit `2f19977aa26d7996f66669973d7c6a8a1216b559` is recorded.
+- [x] Source `main` is pushed to `Googieman/75percenters` without force-push at `fb17406150e5276a16d558df4f1becca923516f4`.
+- [x] Render's latest live API deploy remains `2f19977aa26d7996f66669973d7c6a8a1216b559`; its health endpoint returned 200.
+- [x] A hard refresh of `https://75percenters.vercel.app` shows the tracker-account/Chrome-connector sign-in text from the pushed source.
 - [ ] Render creates exactly one free API and one temporary free PostgreSQL database; no worker or paid resource exists.
 - [ ] API startup runs `alembic upgrade head` before Uvicorn and connects through the normalized Psycopg URL.
 - [ ] Vercel installs with `npm --prefix frontend ci`, uses Node 24, and rewrites `/api/v1/*` to the actual Render hostname.

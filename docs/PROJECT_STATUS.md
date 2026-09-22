@@ -46,6 +46,7 @@ Last updated: 2026-09-22 (Asia/Kolkata)
 - Secured both session and CSRF cookies in staging, normalized Render `postgres://`/`postgresql://` URLs to the installed Psycopg 3 driver for API and Alembic, and kept development cookies usable over HTTP.
 - Bounded free-tier PWA refresh recovery: open/focus requests coalesce, server cooldowns surface as retry states, terminal jobs render immediately, on-demand queued jobs do not poll without a worker, and on-demand deployments never advertise notifications.
 - Replaced the paid-only Render pre-deploy migration hook with migration-before-Uvicorn startup, set the staging Vercel rewrite to `srm-attendance-api-staging.onrender.com`, added the local staging policy verifier, and re-ran clean `npm ci` installs.
+- Verified source publication: `main` is pushed to `https://github.com/Googieman/75percenters` at `fb17406150e5276a16d558df4f1becca923516f4`. The Render API's latest live deploy remains `2f19977aa26d7996f66669973d7c6a8a1216b559` with health 200, and a hard refresh of `https://75percenters.vercel.app` shows the tracker-account/Chrome-connector sign-in text from the pushed source.
 
 ## Architecture decisions
 
@@ -149,9 +150,9 @@ docker compose stop postgres-test
 
 ## Deployment state
 
-Free-tier staging configuration is corrected and audited. The API is deployed at `https://srm-attendance-api-staging.onrender.com` and the PWA at `https://75percenters.vercel.app`, from deployed commit `2f19977aa26d7996f66669973d7c6a8a1216b559`; the temporary Render PostgreSQL database expires on 2026-10-22. The current tracked tree excludes local profiles, secrets, build output, and the untracked `AGENTS.md`; history contains no high-confidence credential markers or raw portal data. No paid plan or Render worker exists, so notifications remain unavailable.
+Free-tier staging configuration is corrected and audited. Source `main` is pushed to `https://github.com/Googieman/75percenters` at `fb17406150e5276a16d558df4f1becca923516f4`. The API is deployed at `https://srm-attendance-api-staging.onrender.com` from latest live commit `2f19977aa26d7996f66669973d7c6a8a1216b559` with health 200, and the PWA at `https://75percenters.vercel.app` hard-refreshes to the tracker-account/Chrome-connector sign-in text from the pushed source. The temporary Render PostgreSQL database expires on 2026-10-22. The current tracked tree excludes local profiles, secrets, build output, and the untracked `AGENTS.md`; history contains no high-confidence credential markers or raw portal data. No paid plan or Render worker exists, so notifications remain unavailable.
 
-The remaining external gates are tracker bootstrap over the TLS database URL restricted to the operator IP, live HTTPS/security checks, the local-only Chrome connector checkpoint, and private dump/restore before the temporary database expires.
+The remaining external gates are tracker bootstrap over the TLS database URL restricted to the operator IP, public cookie and CSRF checks, public synthetic ingestion/history, the local-only Chrome connector checkpoint, and private dump/restore before the temporary database expires. None of those gates is claimed complete by the publication record.
 
 ## Blockers and manual verification
 

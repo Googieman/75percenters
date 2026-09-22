@@ -102,15 +102,17 @@ worker dispatches them.
 
 | Item | Result |
 | --- | --- |
+| Source repository | https://github.com/Googieman/75percenters, `main` pushed at `fb17406150e5276a16d558df4f1becca923516f4` |
 | Render API URL | https://srm-attendance-api-staging.onrender.com |
 | Render health URL | https://srm-attendance-api-staging.onrender.com/api/v1/health (200) |
 | Vercel PWA URL | https://75percenters.vercel.app |
-| Deployed commit | `2f19977aa26d7996f66669973d7c6a8a1216b559` |
+| Vercel source check | A hard refresh shows the tracker-account/Chrome-connector sign-in text from the pushed source |
+| Render API latest live deploy | `2f19977aa26d7996f66669973d7c6a8a1216b559` (health 200) |
 | Temporary database expiry | 2026-10-22 |
-| HTTPS/cookie/CSRF check | Public health passed; tracker bootstrap and auth checks pending |
-| Synthetic attendance/history check | Passed locally; public verification pending |
+| HTTPS/cookie/CSRF check | Public health passed; tracker bootstrap, public cookie, and CSRF checks pending |
+| Synthetic attendance/history check | Passed locally; public synthetic ingestion/history verification pending |
 | Database dump/restore | Pending before expiry |
-| CampusWeb acquisition | Disabled |
+| CampusWeb acquisition | Disabled; live CampusWeb connector verification pending |
 
 The tracker account is created without Render shell access. After the database
 is provisioned, set `SRM_TRACKER_DATABASE_URL` only in the current local

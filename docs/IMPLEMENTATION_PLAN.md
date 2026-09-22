@@ -87,5 +87,15 @@ The code/configuration gate for this milestone is complete: staging cookies are
 from the startup command, Vercel uses the staging API hostname, the PWA refresh
 lifecycle is bounded for no-worker hosting, and on-demand staging does not
 advertise notifications. The free staging deployment is live; database
-bootstrap, public security checks, local connector verification, and the private
-dump/restore gate remain open.
+bootstrap, public security checks, public synthetic ingestion/history, local
+connector verification, and the private dump/restore gate remain open.
+
+Publication record: source `main` is pushed to
+`https://github.com/Googieman/75percenters` at
+`fb17406150e5276a16d558df4f1becca923516f4`. The Render API's latest live deploy
+remains `2f19977aa26d7996f66669973d7c6a8a1216b559` with health 200. A hard
+refresh of `https://75percenters.vercel.app` shows the tracker-account/
+Chrome-connector sign-in text from the pushed source. This does not claim
+tracker bootstrap, public cookie or CSRF checks, public synthetic
+ingestion/history, private dump/restore, or live CampusWeb connector
+verification.
