@@ -13,7 +13,7 @@ if (!apiOrigin || !/^https?:\/\/[^/]+$/.test(apiOrigin)) {
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-const files = ["manifest.json", "worker.mjs", "worker-policy.mjs", "popup.html", "popup.mjs", "popup.css", "page-collector.js", "message-policy.mjs", "collector.mjs", "portal-policy.mjs"];
+const files = ["manifest.json", "worker.mjs", "worker-policy.mjs", "campusweb-open.mjs", "popup.html", "popup.mjs", "popup.css", "page-collector.js", "message-policy.mjs", "collector.mjs", "portal-policy.mjs"];
 for (const file of files) {
   const input = await readFile(join(source, file), "utf8");
   await writeFile(join(output, file), input.replaceAll("__SRM_TRACKER_API_ORIGIN__", apiOrigin), "utf8");

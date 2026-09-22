@@ -84,3 +84,66 @@ No known implementation concerns. Live portal/browser verification was not
 performed; this task uses sanitized local tests and runtime doubles and does
 not require entering real CampusWeb credentials.
 
+## Review follow-up: runtime coverage (fix round 1)
+
+The review finding was addressed by extracting the worker and popup CampusWeb
+runtime behavior into `connector/src/campusweb-open.mjs`. The worker now calls
+`openCampusWeb`, and the popup now calls `requestCampusWebOpen`; both helpers
+remain injectable for deterministic tests.
+
+### Files changed
+
+- `connector/src/campusweb-open.mjs` — opens the fixed URL, maps tab-opening
+  failures to `OPEN_FAILED`, sends the exact worker message, and returns the
+  required success/failure text.
+- `connector/src/worker.mjs` — delegates CampusWeb tab creation to the helper.
+- `connector/src/popup.mjs` — delegates the CampusWeb request and status text
+  to the helper.
+- `connector/scripts/build.mjs` — packages the new helper module.
+- `connector/tests/campusweb-open.test.mjs` — covers the real helper behavior
+  with injected tab/message doubles.
+- This report.
+
+### TDD RED/GREEN evidence
+
+1. RED: after adding the focused tests but before adding the helper, the
+   targeted `npm test -- --test-name-pattern="CampusWeb|CampusWeb cannot|worker message|failure text"`
+   run failed with `ERR_MODULE_NOT_FOUND` for
+   `src/campusweb-open.mjs`; the existing 15 tests passed and the new test
+   module failed as expected.
+2. GREEN: after the helper and consumer wiring were added,
+   `node --test tests/campusweb-open.test.mjs` passed 4/4. The tests assert the
+   exact `{ url: "https://sp.srmist.edu.in/srmiststudentportal/" }` tab
+   argument, `{ type: "OPEN_CAMPUSWEB" }` message, `OPEN_FAILED` result, and
+   exact success/failure text.
+
+### Verification
+
+- `npm test` from `connector`: passed, 19/19 tests.
+- `npm run build -- https://srm-attendance-api-staging.onrender.com` from
+  `connector`: passed.
+- Built manifest audit: permissions remain `activeTab,scripting,storage`;
+  `cookies` and `webRequest` are absent; the built helper is present and both
+  worker and popup import it.
+- `git diff --check`: passed.
+
+### Self-review
+
+- Runtime tab creation and popup messaging are now tested through the helpers
+  actually used by the worker and popup.
+- The popup cannot supply a URL; the existing exact-message policy still
+  rejects caller-supplied URL fields.
+- No credentials, cookies, session tokens, automatic login, or permissions
+  were added. Existing explicit Sync behavior and structured upload boundaries
+  remain unchanged.
+
+### Commit
+
+Created for this review fix with subject:
+
+`fix: cover CampusWeb opener runtime behavior`
+
+### Concerns
+
+No known implementation concerns. Live portal/browser verification was not
+performed; this fix uses sanitized local tests and injected runtime doubles.

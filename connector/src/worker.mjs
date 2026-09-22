@@ -3,6 +3,7 @@ import {
   isTrustedPopupSender,
   validateCollectorResult,
 } from "./message-policy.mjs";
+import { openCampusWeb } from "./campusweb-open.mjs";
 import { CAMPUSWEB_LOGIN_URL, isAllowedPortalUrl } from "./portal-policy.mjs";
 import { getCampusWebOpenUrl } from "./worker-policy.mjs";
 
@@ -48,15 +49,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ ok: false, errorCode: WORKER_ERROR_CODES.UNKNOWN });
   return false;
 });
-
-async function openCampusWeb() {
-  try {
-    await chrome.tabs.create({ url: CAMPUSWEB_LOGIN_URL });
-    return { ok: true };
-  } catch {
-    return { ok: false, errorCode: WORKER_ERROR_CODES.OPEN_FAILED };
-  }
-}
 
 async function pair(code) {
   if (typeof code !== "string" || !code.trim()) {

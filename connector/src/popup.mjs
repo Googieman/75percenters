@@ -1,3 +1,5 @@
+import { requestCampusWebOpen } from "./campusweb-open.mjs";
+
 const status = document.querySelector("#status");
 const pairing = document.querySelector("#pairing");
 const pairingCode = document.querySelector("#pairing-code");
@@ -34,14 +36,7 @@ async function pair() {
 async function openCampusWeb() {
   openCampusWebButton.disabled = true;
   try {
-    const result = await chrome.runtime.sendMessage({ type: "OPEN_CAMPUSWEB" });
-    showMessage(
-      result?.ok
-        ? "CampusWeb opened. Sign in there, then open the attendance report."
-        : "Unable to open CampusWeb.",
-    );
-  } catch {
-    showMessage("Unable to open CampusWeb.");
+    showMessage(await requestCampusWebOpen());
   } finally {
     openCampusWebButton.disabled = false;
   }
